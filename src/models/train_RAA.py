@@ -19,7 +19,6 @@ class RAA(nn.Module):
         self.latent_zi = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
         self.latent_zj = torch.nn.Parameter(torch.randn(self.input_size[1], self.k))
 
-        self.eps = 1e-7
     def log_likelihood(self):
         #TODO 
         # don't sum over i==j
