@@ -15,14 +15,17 @@ class RAA(nn.Module):
         self.gamma = torch.nn.Parameter(torch.randn(self.input_size[1]))
         self.a = torch.nn.Parameter(torch.randn(1))
         self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0])) #Should probably be changed to a single N
-        self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k)) #Should probably be changed to a single N
+        self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
         self.latent_zi = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
         self.latent_zj = torch.nn.Parameter(torch.randn(self.input_size[1], self.k))
 
+        self.eps = 1e-7
     def log_likelihood(self):
-        #TODO don't sum over i==j
+        #TODO 
+        # don't sum over i==j
+        # Constraints are not implemented sum(Z) = 1 and Z > 0 same goes for C
+
         z_dist = (((torch.unsqueeze(torch.matmul(self.latent_zi, torch.matmul(self.Z, self.C)), 1) - torch.matmul(self.latent_zj, torch.matmul(self.Z, self.C)) + 1e-06 )**2 ).sum(-1))**0.5
-        #z_dist = (((torch.unsqueeze(torch.matmul(self.Z, torch.matmul(self.C, self.latent_zi)), 1) - torch.matmul(self.Z, torch.matmul(self.C, self.latent_zj)) + 1e-06 )**2 ).sum(-1))**0.5
         bias_matrix = torch.unsqueeze(self.beta, 1) + self.gamma
         theta = bias_matrix - self.a * z_dist
         LL = ((theta) * self.A).sum() - torch.sum(torch.log(1 + torch.exp(theta)))
