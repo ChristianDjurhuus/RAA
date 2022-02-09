@@ -31,16 +31,19 @@ class RAA(nn.Module):
         return LL
 
 if __name__ == "__main__":
+    seed = 1998
+    torch.random.manual_seed(seed)
+
     A = mmread("data/raw/soc-karate.mtx")
     A = A.todense()
     A = torch.from_numpy(A)
     k = 2
 
     model = RAA(A = A, input_size = A.shape, k=k)
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
-    iterations = 10000
+    iterations = 50000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
@@ -51,7 +54,6 @@ if __name__ == "__main__":
     
     def setup_mpl():
         mpl.rcParams['font.family'] = 'Helvetica Neue'
-        mpl.rcParams['lines.linewidth'] = 1
     setup_mpl()
 
     #Plotting latent space
