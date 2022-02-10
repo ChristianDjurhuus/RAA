@@ -25,7 +25,7 @@ class RAA(nn.Module):
         M = torch.matmul(torch.matmul(Z, F.softmax(self.C, dim=0)), Z).T #(N x K)
         z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = beta - self.a * z_dist #(N x N)
-        softplus_theta = F.softplus(theta)
+        softplus_theta = F.softplus(theta) # log(1+exp(theta))
         LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
 
         return LL
