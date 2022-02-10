@@ -20,11 +20,13 @@ class RAA(nn.Module):
 
     def log_likelihood(self):
 
-        temp = torch.matmul(torch.matmul(F.softmax(self.Z, dim=1), F.softmax(self.C, dim=1)), F.softmax(self.Z, dim=1)).T #(N x K)
-        z_dist = ((temp.unsqueeze(1) - temp + 1e-06)**2).sum(-1)**0.5 # (N x N)
-        theta = self.beta - self.a * z_dist #(N x N)
-
-        LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(F.softplus(theta)-torch.diag(torch.diagonal(F.softplus(theta))))
+        beta = self.beta.unsqueeze(1) + self.beta #(N x N)
+        Z = F.softmax(self.Z, dim=0) #(K x N)
+        M = torch.matmul(torch.matmul(Z, F.softmax(self.C, dim=0)), Z).T #(N x K)
+        z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
+        theta = beta - self.a * z_dist #(N x N)
+        softplus_theta = F.softplus(theta)
+        LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
 
         return LL
 
