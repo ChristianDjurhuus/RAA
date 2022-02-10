@@ -19,17 +19,12 @@ class RAA(nn.Module):
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
 
     def log_likelihood(self):
-        #TODO 
-        # don't sum over i==j (Subtract diagonal after final matrix)
-
 
         temp = torch.matmul(torch.matmul(F.softmax(self.Z, dim=1), F.softmax(self.C, dim=1)), F.softmax(self.Z, dim=1)).T #(N x K)
         z_dist = ((temp.unsqueeze(1) - temp + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = self.beta - self.a * z_dist #(N x N)
 
-
         LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(F.softplus(theta)-torch.diag(torch.diagonal(F.softplus(theta))))
-
 
         return LL
 
