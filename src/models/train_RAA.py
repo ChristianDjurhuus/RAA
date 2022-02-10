@@ -23,10 +23,14 @@ class RAA(nn.Module):
         # don't sum over i==j (Subtract diagonal after final matrix)
 
 
-        temp = torch.matmul(torch.matmul(F.softmax(self.Z, dim=1), F.softmax(self.C, dim=1)), F.softmax(self.Z, dim=1)).T
-        z_dist = ((temp.unsqueeze(1) - temp + 1e-06)**2).sum(-1)**0.5 # (N x K)
+        temp = torch.matmul(torch.matmul(F.softmax(self.Z, dim=1), F.softmax(self.C, dim=1)), F.softmax(self.Z, dim=1)).T #(N x K)
+        z_dist = ((temp.unsqueeze(1) - temp + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = self.beta - self.a * z_dist #(N x N)
-        LL = ((theta) * self.A).sum() - torch.sum(F.softplus(theta))
+
+
+        LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(F.softplus(theta)-torch.diag(torch.diagonal(F.softplus(theta))))
+
+
         return LL
 
 if __name__ == "__main__": 
