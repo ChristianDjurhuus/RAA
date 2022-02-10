@@ -38,13 +38,13 @@ if __name__ == "__main__":
     A = mmread("data/raw/soc-karate.mtx")
     A = A.todense()
     A = torch.from_numpy(A)
-    k = 3
+    k = 2
 
     model = RAA(A = A, input_size = A.shape, k=k)
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
-    iterations = 10000
+    iterations = 1000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
@@ -59,15 +59,18 @@ if __name__ == "__main__":
 
     #Plotting latent space
     embeddings = torch.matmul(torch.matmul(model.Z, model.C), model.Z).T
+    archetypes = torch.matmul(model.Z, model.C)
 
     if embeddings.shape[1] == 3:
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         ax.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy(), embeddings[:,2].detach().numpy())
+        ax.scatter(archetypes[:,0].detach().numpy(), archetypes[:,1].detach().numpy(), archetypes[:,2].detach().numpy(), marker = '^', c='red')
         ax.set_title(f"Latent space after {iterations} iterations")
     else:
         fig, (ax1, ax2) = plt.subplots(1, 2, dpi=400)
-        ax1.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy(),)
+        ax1.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy())
+        ax1.scatter(archetypes[:,0].detach().numpy(), archetypes[:,1].detach().numpy(), marker = '^', c = 'red')
         ax1.set_title(f"Latent space after {iterations} iterations")
         #Plotting learning curve
         ax2.plot(losses)
