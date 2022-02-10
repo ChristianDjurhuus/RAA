@@ -1,3 +1,4 @@
+from sklearn.datasets import fetch_kddcup99
 import torch
 import torch.nn as nn
 from scipy.io import mmread
@@ -37,13 +38,13 @@ if __name__ == "__main__":
     A = mmread("data/raw/soc-karate.mtx")
     A = A.todense()
     A = torch.from_numpy(A)
-    k = 2
+    k = 3
 
     model = RAA(A = A, input_size = A.shape, k=k)
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
-    iterations = 50000
+    iterations = 10000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
@@ -57,14 +58,20 @@ if __name__ == "__main__":
     setup_mpl()
 
     #Plotting latent space
-    fig, (ax1, ax2) = plt.subplots(1, 2, dpi=400)
-    #latent_zi = model.latent_zi.data.numpy()
-    #latent_zj = model.latent_zj.data.numpy()
-    #ax1.scatter(latent_zi[:,0], latent_zj[:,1])
-    #ax1.set_title(f"Latent space after {iterations} iterations")
-    #Plotting learning curve
-    ax2.plot(losses)
-    ax2.set_title("Loss")
+    embeddings = torch.matmul(torch.matmul(model.Z, model.C), model.Z).T
+
+    if embeddings.shape[1] == 3:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        ax.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy(), embeddings[:,2].detach().numpy())
+        ax.set_title(f"Latent space after {iterations} iterations")
+    else:
+        fig, (ax1, ax2) = plt.subplots(1, 2, dpi=400)
+        ax1.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy(),)
+        ax1.set_title(f"Latent space after {iterations} iterations")
+        #Plotting learning curve
+        ax2.plot(losses)
+        ax2.set_title("Loss")
     plt.show()
 
 
