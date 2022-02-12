@@ -1,4 +1,5 @@
 from re import I
+from sklearn.utils import compute_sample_weight
 import torch
 import torch.nn as nn
 from scipy.io import mmread
@@ -46,23 +47,18 @@ class RAA(nn.Module):
     
     def link_prediction(self, A_test, idx_i_test, idx_j_test):
         with torch.no_grad():
-            #Create indexes for test-set relationships
-            #idx_test = torch.where(torch.isnan(A_test) == False) # But there is no NANs, seems like this step is redundant?
+            Z = F.softmax(self.Z, dim=0)
+            C = F.softmax(self.C, dim=0)
 
-            #Distance measure (euclidian)
-            #z_pdist_test = (((self.latent_zi[idx_test[0]] - self.latent_zj[idx_test[1]]+1e-06)**2).sum(-1))**0.5
+            M_i = torch.matmul(torch.matmul(Z, C), self.Z[:, idx_i_test]).T #Size of test set e.g. K x N
+            M_j = torch.matmul(torch.matmul(Z, C), self.Z[:, idx_j_test]).T
+            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+            theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test) # N x N
 
-            M = torch.matmul(torch.matmul(self.Z, self.C), self.Z[:, idx_i_test]).T #Size of test set e.g. K x N
-
-            z_pdist_test = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # N x N 
-            #Add bias matrices
-            logit_u_test = -z_pdist_test + self.beta[idx_i_test] # N x N
-
-            #Get the rate
-            rate = torch.exp(logit_u_test).flatten() # N^2 
+            #Get the rate -> exp(log_odds) 
+            rate = torch.exp(theta).flatten() # N^2 
 
             #Create target (make sure its in the right order by indexing)
-            
             target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten() #N^2
 
 
