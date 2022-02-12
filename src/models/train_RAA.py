@@ -50,8 +50,8 @@ class RAA(nn.Module):
             Z = F.softmax(self.Z, dim=0)
             C = F.softmax(self.C, dim=0)
 
-            M_i = torch.matmul(torch.matmul(Z, C), self.Z[:, idx_i_test]).T #Size of test set e.g. K x N
-            M_j = torch.matmul(torch.matmul(Z, C), self.Z[:, idx_j_test]).T
+            M_i = torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test]).T #Size of test set e.g. K x N
+            M_j = torch.matmul(torch.matmul(Z, C), Z[:, idx_j_test]).T
             z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
             theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test) # N x N
 
@@ -72,7 +72,7 @@ class RAA(nn.Module):
 
 
 if __name__ == "__main__": 
-    seed = 1998
+    seed = 1984
     torch.random.manual_seed(seed)
 
     A = mmread("data/raw/soc-karate.mtx")
