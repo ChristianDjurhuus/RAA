@@ -4,6 +4,7 @@ from scipy.io import mmread
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
+import networkx as nx 
 
 class RAA(nn.Module):
     def __init__(self, A, input_size, k):
@@ -62,15 +63,25 @@ class RAA(nn.Module):
 
 
 if __name__ == "__main__": 
-    seed = 1984
+    seed = 42
     torch.random.manual_seed(seed)
 
-    A = mmread("data/raw/soc-karate.mtx")
-    A = A.todense()
+    #A = mmread("data/raw/soc-karate.mtx")
+    #A = A.todense()
+    ZKC_graph = nx.karate_club_graph()
+    #Let's keep track of which nodes represent John A and Mr Hi
+    Mr_Hi = 0
+    John_A = 33
+
+    #Let's display the labels of which club each member ended up joining
+    club_labels = nx.get_node_attributes(ZKC_graph,'club')
+
+    #Getting adjacency matrix
+    A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
     k = 3
 
-    link_pred = True
+    link_pred = False
 
     if link_pred:
         A_shape = A.shape
@@ -88,7 +99,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
-    iterations = 10000
+    iterations = 5000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
@@ -112,16 +123,28 @@ if __name__ == "__main__":
     embeddings = torch.matmul(torch.matmul(Z, C), Z).T
     archetypes = torch.matmul(Z, C)
 
+    labels = list(club_labels.values())
+    idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
+    idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
+
     if embeddings.shape[1] == 3:
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
-        ax.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy(), embeddings[:,2].detach().numpy())
-        ax.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), archetypes[2,:].detach().numpy(), marker = '^', c='red')
+        ax.scatter(embeddings[:,0].detach().numpy()[idx_hi], embeddings[:,1].detach().numpy()[idx_hi], embeddings[:,2].detach().numpy()[idx_hi], c = 'red', label='Mr. Hi' )
+        ax.scatter(embeddings[:,0].detach().numpy()[idx_of], embeddings[:,1].detach().numpy()[idx_of], embeddings[:,2][idx_of].detach().numpy(), c = 'blue', label='Officer')
+        ax.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), archetypes[2,:].detach().numpy(), marker = '^', c='black')
+        ax.text(embeddings[Mr_Hi,0].detach().numpy(), embeddings[Mr_Hi,1].detach().numpy(), embeddings[Mr_Hi,2].detach().numpy(), 'Mr. Hi')
+        ax.text(embeddings[John_A, 0].detach().numpy(), embeddings[John_A, 1].detach().numpy(), embeddings[John_A, 2].detach().numpy(),  'Officer')
         ax.set_title(f"Latent space after {iterations} iterations")
+        ax.legend()
     else:
-        fig, (ax1, ax2) = plt.subplots(1, 2, dpi=400)
-        ax1.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy())
-        ax1.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), marker = '^', c = 'red')
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.scatter(embeddings[:,0].detach().numpy()[idx_hi], embeddings[:,1].detach().numpy()[idx_hi], c = 'red', label='Mr. Hi')
+        ax1.scatter(embeddings[:,0].detach().numpy()[idx_of], embeddings[:,1].detach().numpy()[idx_of], c = 'blue', label='Officer')
+        ax1.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), marker = '^', c = 'black')
+        ax1.annotate('Mr. Hi', embeddings[Mr_Hi,:])
+        ax1.annotate('Officer', embeddings[John_A, :])
+        ax1.legend()
         ax1.set_title(f"Latent space after {iterations} iterations")
         #Plotting learning curve
         ax2.plot(losses)
