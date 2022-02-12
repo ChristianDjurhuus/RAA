@@ -1,11 +1,8 @@
-from re import I
-from sklearn.utils import compute_sample_weight
 import torch
 import torch.nn as nn
 from scipy.io import mmread
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
-import numpy as np
 from sklearn import metrics
 
 class RAA(nn.Module):
@@ -17,8 +14,6 @@ class RAA(nn.Module):
 
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
         self.a = torch.nn.Parameter(torch.randn(1))
-        #self.Z = torch.nn.Parameter(F.softmax(torch.randn(self.k, self.input_size[0]), dim=1)) #This maybe gives a better initialization but not sure if worth the compute
-        #self.C = torch.nn.Parameter(F.softmax(torch.randn(self.input_size[0], self.k), dim=1)) 
         self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
 
@@ -39,11 +34,6 @@ class RAA(nn.Module):
         LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
 
         return LL
-
-    def forward(self):
-
-
-        return
     
     def link_prediction(self, A_test, idx_i_test, idx_j_test):
         with torch.no_grad():
@@ -78,7 +68,7 @@ if __name__ == "__main__":
     A = mmread("data/raw/soc-karate.mtx")
     A = A.todense()
     A = torch.from_numpy(A)
-    k = 2
+    k = 3
 
     link_pred = True
 
@@ -108,13 +98,13 @@ if __name__ == "__main__":
         print('Loss at the',_,'iteration:',loss.item())
     
     #Link prediction
-    base_fpr = np.linspace(0, 1, 101)
     if link_pred:
         auc_score, fpr, tpr = model.link_prediction(A_test, idx_i_test, idx_j_test)
-        plt.plot(fpr, tpr, 'b', alpha=0.15)
+        plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % auc_score)
+        plt.plot([0, 1], [0, 1],'r--', label='random')
+        plt.legend(loc = 'lower right')
         plt.xlabel("False positive rate")
         plt.ylabel("True positive rate")
-        #tpr = np.interp(base_fpr, fpr, tpr)
 
     #Plotting latent space
     Z = F.softmax(model.Z, dim=0)
@@ -126,32 +116,14 @@ if __name__ == "__main__":
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
         ax.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy(), embeddings[:,2].detach().numpy())
-        ax.scatter(archetypes[:,0].detach().numpy(), archetypes[:,1].detach().numpy(), archetypes[:,2].detach().numpy(), marker = '^', c='red')
+        ax.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), archetypes[2,:].detach().numpy(), marker = '^', c='red')
         ax.set_title(f"Latent space after {iterations} iterations")
     else:
         fig, (ax1, ax2) = plt.subplots(1, 2, dpi=400)
         ax1.scatter(embeddings[:,0].detach().numpy(), embeddings[:,1].detach().numpy())
-        #ax1.scatter(archetypes[:,0].detach().numpy(), archetypes[:,1].detach().numpy(), marker = '^', c = 'red')
         ax1.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), marker = '^', c = 'red')
         ax1.set_title(f"Latent space after {iterations} iterations")
         #Plotting learning curve
         ax2.plot(losses)
         ax2.set_title("Loss")
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
