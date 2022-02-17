@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
 import networkx as nx 
+import numpy as np
+import umap
+import umap.plot
 
 class LSM(nn.Module):
     def __init__(self, A, input_size, latent_dim):
@@ -16,7 +19,7 @@ class LSM(nn.Module):
         self.beta = torch.nn.Parameter(torch.randn(1))
         self.alpha = torch.nn.Parameter(torch.randn(1))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim))
-        self.X = torch.nn.Parameter(torch.randn(self.input_size[0], self.input_size[1])) # Question what do we do about the covariates?
+        self.X = torch.nn.Parameter(torch.randn(self.input_size[0], self.input_size[1])) # Question: what do we do about the covariates?
 
 
     def random_sampling(self):
@@ -71,7 +74,7 @@ if __name__ == "__main__":
     #Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
-    latent_dim = 2
+    latent_dim = 10
 
     link_pred = True
 
@@ -108,6 +111,7 @@ if __name__ == "__main__":
         plt.legend(loc = 'lower right')
         plt.xlabel("False positive rate")
         plt.ylabel("True positive rate")
+        plt.show()
 
 
     labels = list(club_labels.values())
@@ -125,7 +129,7 @@ if __name__ == "__main__":
         ax.text(latent_Z[John_A, 0], latent_Z[John_A, 1], latent_Z[John_A, 2],  'Officer')
         ax.set_title(f"Latent space after {iterations} iterations")
         ax.legend()
-    else:
+    if latent_Z.shape[1] == 2:
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.scatter(latent_Z[:,0][idx_hi], latent_Z[:,1][idx_hi], c = 'red', label='Mr. Hi')
         ax1.scatter(latent_Z[:,0][idx_of], latent_Z[:,1][idx_of], c = 'blue', label='Officer')
@@ -136,4 +140,16 @@ if __name__ == "__main__":
         #Plotting learning curve
         ax2.plot(losses)
         ax2.set_title("Loss")
-    plt.show()
+    else:
+        embedding = umap.UMAP().fit_transform(latent_Z)
+        color_dict = {"Mr. Hi":"red", "Officer":"blue"}
+        plt.scatter(
+            embedding[:, 0],
+            embedding[:, 1],
+            c=[color_dict[i] for i in labels ]
+            )
+        plt.annotate('Mr. Hi', embedding[Mr_Hi,:])
+        plt.annotate('Officer', embedding[John_A, :])
+        plt.gca().set_aspect('equal', 'datalim')
+        plt.title(f'UMAP projection of the latent space with dim: {latent_Z.shape[1]}')
+        plt.show()
