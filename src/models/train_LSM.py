@@ -16,7 +16,7 @@ class LSM(nn.Module):
         self.beta = torch.nn.Parameter(torch.randn(1))
         self.alpha = torch.nn.Parameter(torch.randn(1))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim))
-        self.X = torch.nn.Parameter(torch.randn(self.input_size[0], self.input_size[1]))
+        self.X = torch.nn.Parameter(torch.randn(self.input_size[0], self.input_size[1])) # Question what do we do about the covariates?
 
 
     def random_sampling(self):
@@ -27,7 +27,7 @@ class LSM(nn.Module):
     def log_likelihood(self):
 
         z_dist = ((self.latent_Z.unsqueeze(1) - self.latent_Z + 1e-06)**2).sum(-1)**0.5 # (N x N)
-        theta = self.alpha + self.beta * self.X - z_dist #(N x N)
+        theta = self.alpha + self.beta - z_dist #(N x N)
         softplus_theta = F.softplus(theta) # log(1+exp(theta))
         LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
 
@@ -37,14 +37,13 @@ class LSM(nn.Module):
         with torch.no_grad():
 
             z_pdist_test = ((self.latent_Z[idx_i_test, :].unsqueeze(1) - self.latent_Z[idx_j_test, :] + 1e-06)**2).sum(-1)**0.5 # N x N 
-            theta = self.alpha + self.beta * self.X[idx_i_test.unsqueeze(1), idx_j_test] - z_pdist_test #(N x N)
+            theta = self.alpha + self.beta - z_pdist_test #(N x N)
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta).flatten() # N^2 
 
             #Create target (make sure its in the right order by indexing)
             target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten() #N^2
-
 
             fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
 
@@ -72,7 +71,7 @@ if __name__ == "__main__":
     #Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
-    latent_dim = 3
+    latent_dim = 2
 
     link_pred = True
 
