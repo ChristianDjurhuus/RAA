@@ -16,10 +16,8 @@ class LSM(nn.Module):
         self.input_size = input_size
         self.latent_dim = latent_dim
 
-        self.beta = torch.nn.Parameter(torch.randn(1))
         self.alpha = torch.nn.Parameter(torch.randn(1))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim))
-        self.X = torch.nn.Parameter(torch.randn(self.input_size[0], self.input_size[1])) # Question: what do we do about the covariates?
 
 
     def random_sampling(self):
@@ -30,9 +28,9 @@ class LSM(nn.Module):
     def log_likelihood(self):
 
         z_dist = ((self.latent_Z.unsqueeze(1) - self.latent_Z + 1e-06)**2).sum(-1)**0.5 # (N x N)
-        theta = self.alpha + self.beta - z_dist #(N x N)
+        theta = self.alpha - z_dist #(N x N)
         softplus_theta = F.softplus(theta) # log(1+exp(theta))
-        LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
+        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta))) #Times by 0.5 to avoid double counting
 
         return LL
     
@@ -49,7 +47,6 @@ class LSM(nn.Module):
             target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten() #N^2
 
             fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
-
 
             #Determining AUC score and precision and recall
             auc_score = metrics.roc_auc_score(target.cpu().data.numpy(), rate.cpu().data.numpy())
@@ -74,7 +71,7 @@ if __name__ == "__main__":
     #Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
-    latent_dim = 10
+    latent_dim = 2
 
     link_pred = True
 
@@ -111,6 +108,7 @@ if __name__ == "__main__":
         plt.legend(loc = 'lower right')
         plt.xlabel("False positive rate")
         plt.ylabel("True positive rate")
+        plt.title("Latent space model")
         plt.show()
 
 
@@ -129,6 +127,8 @@ if __name__ == "__main__":
         ax.text(latent_Z[John_A, 0], latent_Z[John_A, 1], latent_Z[John_A, 2],  'Officer')
         ax.set_title(f"Latent space after {iterations} iterations")
         ax.legend()
+        plt.show()
+
     if latent_Z.shape[1] == 2:
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.scatter(latent_Z[:,0][idx_hi], latent_Z[:,1][idx_hi], c = 'red', label='Mr. Hi')
@@ -140,7 +140,13 @@ if __name__ == "__main__":
         #Plotting learning curve
         ax2.plot(losses)
         ax2.set_title("Loss")
-    else:
+        plt.show()
+        #Trying to add networkx drawing
+        #pos = {i: latent_Z[i, :] for i in range(A.shape[0])}
+        #nx.draw(ZKC_graph, with_labels=True, pos=pos)
+        #plt.show()
+
+    if latent_Z.shape[1] > 3:
         embedding = umap.UMAP().fit_transform(latent_Z)
         color_dict = {"Mr. Hi":"red", "Officer":"blue"}
         plt.scatter(

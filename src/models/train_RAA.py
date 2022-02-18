@@ -32,7 +32,7 @@ class RAA(nn.Module):
         z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = beta - self.a * z_dist #(N x N)
         softplus_theta = F.softplus(theta) # log(1+exp(theta))
-        LL = ((theta-torch.diag(torch.diagonal(theta))) * self.A).sum() - torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
+        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
 
         return LL
     
@@ -63,7 +63,7 @@ class RAA(nn.Module):
 
 
 if __name__ == "__main__": 
-    seed = 42
+    seed = 1984
     torch.random.manual_seed(seed)
 
     #A = mmread("data/raw/soc-karate.mtx")
@@ -79,13 +79,13 @@ if __name__ == "__main__":
     #Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
-    k = 3
+    k = 2
 
-    link_pred = False
+    link_pred = True
 
     if link_pred:
         A_shape = A.shape
-        num_samples = 10
+        num_samples = 15
         idx_i_test = torch.multinomial(input=torch.arange(0,float(A_shape[0])), num_samples=num_samples,
                                        replacement=True)
         idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
@@ -99,7 +99,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
-    iterations = 5000
+    iterations = 10000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
@@ -116,6 +116,8 @@ if __name__ == "__main__":
         plt.legend(loc = 'lower right')
         plt.xlabel("False positive rate")
         plt.ylabel("True positive rate")
+        plt.title("RAA model")
+        plt.show()
 
     #Plotting latent space
     Z = F.softmax(model.Z, dim=0)
