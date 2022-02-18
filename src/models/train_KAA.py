@@ -8,9 +8,9 @@ from sklearn import metrics
 import networkx as nx
 
 
-class RAA(nn.Module):
+class KAA(nn.Module):
     def __init__(self, X, input_size, k):
-        super(RAA, self).__init__()
+        super(KAA, self).__init__()
         self.X = X
         self.input_size = input_size
         self.k = k
@@ -32,13 +32,13 @@ class RAA(nn.Module):
         S = F.softmax(self.S, dim=0)  # (K x N)
         C = F.softmax(self.C, dim=0)  # (N x K)
 
-        y_dist = self.X.unsqueeze(1) - self.X
+        y_dist = (self.X.unsqueeze(1) - self.X).sum(0).float() #TODO: check that we sum the right dimension
 
         kernel = torch.sqrt(2* (y_dist-torch.diag(torch.diagonal(y_dist)))**2) #Can be changed!
         CT_kernel_C = torch.matmul(torch.matmul(C.T, kernel),C)
         z_dist = torch.tensor(zeros(self.input_size)) #Has to be tuple NxN
         #TODO: do broadcasting?!
-        for i, si in enumerate(S):
+        for i, si in enumerate(S.T): #TODO: S.T on both loops? Idk ;) Yea I'd say so.. we are looping through all si and sj..
             for j, sj in enumerate(S.T):
                 z_dist[i,j] = si.T @ CT_kernel_C @ si - si.T @ CT_kernel_C @ sj - sj.T @ CT_kernel_C @ si + sj.T @ CT_kernel_C @ sj
         #TODO: change other stuff in LL?
@@ -56,6 +56,9 @@ class RAA(nn.Module):
 
             M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T  # Size of test set e.g. K x N
             M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
+            
+
+
             z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
             theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test)  # N x N
 
@@ -114,7 +117,7 @@ if __name__ == "__main__":
         A_test[idx_i_test, idx_j_test] = A[idx_i_test, idx_j_test]
         A[idx_i_test, idx_j_test] = 0
 
-    model = RAA(A=A, input_size=A.shape, k=k)
+    model = KAA(X=A, input_size=A.shape, k=k)
     optimizer = torch.optim.Adam(params=model.parameters())
 
     losses = []
