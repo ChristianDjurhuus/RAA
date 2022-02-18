@@ -1,78 +1,148 @@
+from numpy import zeros
 import torch
 import torch.nn as nn
+from scipy.io import mmread
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
 import networkx as nx
 
 
-
-
-#Inspired from Mørup's implementation http://www.mortenmorup.dk/MMhomepageUpdated_files/Page327.htm
-
-class KAA(nn.Module):
-    def __init__(self, K, k, I, U):
-        super(KAA, self).__init__()
-        self.K = K.float()
+class RAA(nn.Module):
+    def __init__(self, X, input_size, k):
+        super(RAA, self).__init__()
+        self.X = X
+        self.input_size = input_size
         self.k = k
-        self.I = I
-        self.U = U
-        self.S = torch.nn.Parameter(torch.randn(self.k, len(self.U)))
-        self.C = torch.nn.Parameter(torch.randn(len(self.I), self.k))
-        self.SST = torch.sum(self.K[:, self.U] * self.K[:, self.U])
 
+        self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
+        self.a = torch.nn.Parameter(torch.randn(1))
 
-    def log_likelihood(self,):
-        S = F.softmax(self.S, dim=0)
-        C = F.softmax(self.C, dim=0)
-        KC = torch.matmul(self.K, C) # N x k
-        CtKC = torch.matmul(torch.matmul(C.T, self.K), C) # k x k Might be a mistake here
-        SSt = torch.matmul(S, S.T)
-        SSE = self.SST - 2 * torch.sum(torch.sum(S.T * KC) + torch.sum(torch.sum(CtKC * SSt)))
-        return SSE
+        #C and s in Monica's paper
+        self.S = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
+
+    def random_sampling(self):
+        # TODO
+
+        return None
+
+    def log_likelihood(self):
+        beta = self.beta.unsqueeze(1) + self.beta  # (N x N)
+        S = F.softmax(self.S, dim=0)  # (K x N)
+        C = F.softmax(self.C, dim=0)  # (N x K)
+
+        y_dist = self.X.unsqueeze(1) - self.X
+
+        kernel = torch.sqrt(2* (y_dist-torch.diag(torch.diagonal(y_dist)))**2) #Can be changed!
+        CT_kernel_C = torch.matmul(torch.matmul(C.T, kernel),C)
+        z_dist = torch.tensor(zeros(self.input_size)) #Has to be tuple NxN
+        #TODO: do broadcasting?!
+        for i, si in enumerate(S):
+            for j, sj in enumerate(S.T):
+                z_dist[i,j] = si.T @ CT_kernel_C @ si - si.T @ CT_kernel_C @ sj - sj.T @ CT_kernel_C @ si + sj.T @ CT_kernel_C @ sj
+        #TODO: change other stuff in LL?
+        theta = beta - self.a * z_dist  # (N x N)
+        softplus_theta = F.softplus(theta)  # log(1+exp(theta))
+        LL = 0.5 * (theta * self.X).sum() - 0.5 * torch.sum(
+            softplus_theta - torch.diag(torch.diagonal(softplus_theta)))  # Times by 0.5 to avoid double counting
+
+        return LL
+
+    def link_prediction(self, A_test, idx_i_test, idx_j_test):
+        with torch.no_grad():
+            S = F.softmax(self.S, dim=0)
+            C = F.softmax(self.C, dim=0)
+
+            M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T  # Size of test set e.g. K x N
+            M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
+            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+            theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test)  # N x N
+
+            # Get the rate -> exp(log_odds)
+            rate = torch.exp(theta).flatten()  # N^2
+
+            # Create target (make sure its in the right order by indexing)
+            target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten()  # N^2
+
+            fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
+
+            # Determining AUC score and precision and recall
+            auc_score = metrics.roc_auc_score(target.cpu().data.numpy(), rate.cpu().data.numpy())
+
+            return auc_score, fpr, tpr
 
 
 if __name__ == "__main__":
     seed = 1984
     torch.random.manual_seed(seed)
 
-    #A = mmread("data/raw/soc-karate.mtx")
-    #A = A.todense()
+    # A = mmread("data/raw/soc-karate.mtx")
+    # A = A.todense()
     ZKC_graph = nx.karate_club_graph()
-    #Let's keep track of which nodes represent John A and Mr Hi
+    # Let's keep track of which nodes represent John A and Mr Hi
     Mr_Hi = 0
     John_A = 33
 
-    #Let's display the labels of which club each member ended up joining
-    club_labels = nx.get_node_attributes(ZKC_graph,'club')
+    # Let's display the labels of which club each member ended up joining
+    club_labels = nx.get_node_attributes(ZKC_graph, 'club')
 
-    #Getting adjacency matrix
+    # Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
+    k = 2
 
-    k = 2 # number of archetypes
-    K = torch.matmul(A.T, A)
+    link_pred = True
 
-    input_size = K.shape
+    if link_pred:
+        # https://dongkwan-kim.github.io/blogs/indices-for-the-upper-triangle-matrix/
+        A_shape = A.shape
+        num_samples = 15
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(A_shape[0])), num_samples=num_samples,
+                                       replacement=True)
+        idx_j_test = torch.tensor(zeros(num_samples)).long()
+        for i in range(len(idx_i_test)):
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(A_shape[1]))[
+                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(A_shape[1])), num_samples=1,
+                                  replacement=True).item()].item()  # Temp solution to sample from upper corner
 
-    
-    model = KAA(K = K, k=k, I=range(input_size[1]), U=range(input_size[1]))
+        # idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
+        #                               replacement=True)
+
+        A_test = A.detach().clone()
+        A_test[:] = 0
+        A_test[idx_i_test, idx_j_test] = A[idx_i_test, idx_j_test]
+        A[idx_i_test, idx_j_test] = 0
+
+    model = RAA(A=A, input_size=A.shape, k=k)
     optimizer = torch.optim.Adam(params=model.parameters())
-    
+
     losses = []
     iterations = 10000
     for _ in range(iterations):
-        loss = - model.log_likelihood() / input_size[0]
+        loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         losses.append(loss.item())
-        print('Loss at the',_,'iteration:',loss.item())
-    
+        print('Loss at the', _, 'iteration:', loss.item())
 
+    # Link prediction
+    if link_pred:
+        auc_score, fpr, tpr = model.link_prediction(A_test, idx_i_test, idx_j_test)
+        plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % auc_score)
+        plt.plot([0, 1], [0, 1], 'r--', label='random')
+        plt.legend(loc='lower right')
+        plt.xlabel("False positive rate")
+        plt.ylabel("True positive rate")
+        plt.title("RAA model")
+        plt.show()
 
-    embeddings = torch.matmul(A.float(), F.softmax(model.C, dim=0)).detach().numpy().T
-    archetypes = torch.matmul(F.softmax(model.S, dim=0), F.softmax(model.C, dim=0)).detach().numpy()
+    # Plotting latent space
+    S = F.softmax(model.S, dim=0)
+    C = F.softmax(model.C, dim=0)
+    embeddings = torch.matmul(torch.matmul(S, C), S).T
+    archetypes = torch.matmul(S, C)
 
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
@@ -81,20 +151,30 @@ if __name__ == "__main__":
     if embeddings.shape[1] == 3:
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
-        ax.scatter(embeddings[:,0].detach().numpy()[idx_hi], embeddings[:,1].detach().numpy()[idx_hi], embeddings[:,2].detach().numpy()[idx_hi], c = 'red', label='Mr. Hi' )
-        ax.scatter(embeddings[:,0].detach().numpy()[idx_of], embeddings[:,1].detach().numpy()[idx_of], embeddings[:,2][idx_of].detach().numpy(), c = 'blue', label='Officer')
-        ax.scatter(archetypes[0,:].detach().numpy(), archetypes[1,:].detach().numpy(), archetypes[2,:].detach().numpy(), marker = '^', c='black')
-        ax.text(embeddings[Mr_Hi,0].detach().numpy(), embeddings[Mr_Hi,1].detach().numpy(), embeddings[Mr_Hi,2].detach().numpy(), 'Mr. Hi')
-        ax.text(embeddings[John_A, 0].detach().numpy(), embeddings[John_A, 1].detach().numpy(), embeddings[John_A, 2].detach().numpy(),  'Officer')
+        ax.scatter(embeddings[:, 0].detach().numpy()[idx_hi], embeddings[:, 1].detach().numpy()[idx_hi],
+                   embeddings[:, 2].detach().numpy()[idx_hi], c='red', label='Mr. Hi')
+        ax.scatter(embeddings[:, 0].detach().numpy()[idx_of], embeddings[:, 1].detach().numpy()[idx_of],
+                   embeddings[:, 2][idx_of].detach().numpy(), c='blue', label='Officer')
+        ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(),
+                   archetypes[2, :].detach().numpy(), marker='^', c='black')
+        ax.text(embeddings[Mr_Hi, 0].detach().numpy(), embeddings[Mr_Hi, 1].detach().numpy(),
+                embeddings[Mr_Hi, 2].detach().numpy(), 'Mr. Hi')
+        ax.text(embeddings[John_A, 0].detach().numpy(), embeddings[John_A, 1].detach().numpy(),
+                embeddings[John_A, 2].detach().numpy(), 'Officer')
         ax.set_title(f"Latent space after {iterations} iterations")
         ax.legend()
     else:
-        fig, ax1 = plt.subplots()
-        ax1.scatter(embeddings[0,:][idx_hi], embeddings[1,:][idx_hi], c = 'red', label='Mr. Hi')
-        ax1.scatter(embeddings[0,:][idx_of], embeddings[1,:][idx_of], c = 'blue', label='Officer')
-        ax1.scatter(archetypes[0,:], archetypes[0,:], marker = '^', c = 'black')
-        ax1.annotate('Mr. Hi', embeddings[:,Mr_Hi])
-        ax1.annotate('Officer', embeddings[:,John_A])
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.scatter(embeddings[:, 0].detach().numpy()[idx_hi], embeddings[:, 1].detach().numpy()[idx_hi], c='red',
+                    label='Mr. Hi')
+        ax1.scatter(embeddings[:, 0].detach().numpy()[idx_of], embeddings[:, 1].detach().numpy()[idx_of], c='blue',
+                    label='Officer')
+        ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
+        ax1.annotate('Mr. Hi', embeddings[Mr_Hi, :])
+        ax1.annotate('Officer', embeddings[John_A, :])
         ax1.legend()
-        ax1.set_title("KAA")
+        ax1.set_title(f"Latent space after {iterations} iterations")
+        # Plotting learning curve
+        ax2.plot(losses)
+        ax2.set_title("Loss")
     plt.show()
