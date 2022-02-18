@@ -1,3 +1,4 @@
+from numpy import zeros
 import torch
 import torch.nn as nn
 from scipy.io import mmread
@@ -32,7 +33,7 @@ class RAA(nn.Module):
         z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = beta - self.a * z_dist #(N x N)
         softplus_theta = F.softplus(theta) # log(1+exp(theta))
-        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
+        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta))) #Times by 0.5 to avoid double counting
 
         return LL
     
@@ -84,12 +85,18 @@ if __name__ == "__main__":
     link_pred = True
 
     if link_pred:
+        # https://dongkwan-kim.github.io/blogs/indices-for-the-upper-triangle-matrix/
         A_shape = A.shape
         num_samples = 15
         idx_i_test = torch.multinomial(input=torch.arange(0,float(A_shape[0])), num_samples=num_samples,
                                        replacement=True)
-        idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
-                                       replacement=True)
+        idx_j_test = torch.tensor(zeros(num_samples)).long()
+        for i in range(len(idx_i_test)):
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(A_shape[1]))[torch.multinomial(input = torch.arange(idx_i_test[i].item(), float(A_shape[1])), num_samples=1, replacement=True).item()].item() #Temp solution to sample from upper corner
+        
+        #idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
+        #                               replacement=True)
+        
         A_test = A.detach().clone()
         A_test[:] = 0
         A_test[idx_i_test, idx_j_test] = A[idx_i_test,idx_j_test]
