@@ -40,7 +40,9 @@ class KAA(nn.Module):
         #TODO: do broadcasting?!
         for i, si in enumerate(S.T): #TODO: S.T on both loops? Idk ;) Yea I'd say so.. we are looping through all si and sj..
             for j, sj in enumerate(S.T):
-                z_dist[i,j] = si.T @ CT_kernel_C @ si - si.T @ CT_kernel_C @ sj - sj.T @ CT_kernel_C @ si + sj.T @ CT_kernel_C @ sj
+                CT_kernel_C_si = CT_kernel_C @ si
+                CT_kernel_C_sj = CT_kernel_C @ sj
+                z_dist[i,j] = si.T @ CT_kernel_C_si - si.T @ CT_kernel_C_sj - sj.T @ CT_kernel_C_si + sj.T @ CT_kernel_C_sj
         #TODO: change other stuff in LL?
         theta = beta - self.a * z_dist  # (N x N)
         softplus_theta = F.softplus(theta)  # log(1+exp(theta))
