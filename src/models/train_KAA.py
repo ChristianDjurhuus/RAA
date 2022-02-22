@@ -9,55 +9,60 @@ import networkx as nx
 
 
 class KAA(nn.Module):
-    def __init__(self, X, input_size, k):
+    def __init__(self, A, input_size, k):
         super(KAA, self).__init__()
-        self.X = X
+        self.A = A
         self.input_size = input_size
         self.k = k
 
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
         self.a = torch.nn.Parameter(torch.randn(1))
 
-        #C and s in Monica's paper
-        self.S = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        self.X = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
+
 
     def random_sampling(self):
         # TODO
 
         return None
 
+    def kernel(self, xt, x):
+
+        kernel = xt@x 
+
+
+        return kernel
+
     def log_likelihood(self):
+        '''We can re-write the last line by (s_i - s_j)^t C^tX^tXC (s_i - s_j) 
+        so if we construct a tensor storing S=(s_i - s_j) for all (i,j) pairs, 
+        it can be written by (CS)^tX^tX(CS) and the term, X^tX, can be replaced by any kernel function K(x, x).'''
+
         beta = self.beta.unsqueeze(1) + self.beta  # (N x N)
-        S = F.softmax(self.S, dim=0)  # (K x N)
+        X = F.softmax(self.X, dim=0)  # (K x N)
         C = F.softmax(self.C, dim=0)  # (N x K)
+        z_dist = torch.tensor(zeros(self.input_size))
+        for i in range(self.X.shape[1]):
+            for j in range(self.X.shape[1]):
+                S = self.X[:,i] - self.X[:,j]
+                CS = C@S
+                z_dist[i, j] = CS.T@self.kernel(X.T,X)@CS
 
-        y_dist = (self.X.unsqueeze(1) - self.X).sum(0).float() #TODO: check that we sum the right dimension
-
-        kernel = torch.sqrt(2* (y_dist-torch.diag(torch.diagonal(y_dist)))**2) #Can be changed!
-        CT_kernel_C = torch.matmul(torch.matmul(C.T, kernel),C)
-        z_dist = torch.tensor(zeros(self.input_size)) #Has to be tuple NxN
-        #TODO: do broadcasting?!
-        for i, si in enumerate(S.T): #TODO: S.T on both loops? Idk ;) Yea I'd say so.. we are looping through all si and sj..
-            for j, sj in enumerate(S.T):
-                CT_kernel_C_si = CT_kernel_C @ si
-                CT_kernel_C_sj = CT_kernel_C @ sj
-                z_dist[i,j] = si.T @ CT_kernel_C_si - si.T @ CT_kernel_C_sj - sj.T @ CT_kernel_C_si + sj.T @ CT_kernel_C_sj
-        #TODO: change other stuff in LL?
         theta = beta - self.a * z_dist  # (N x N)
         softplus_theta = F.softplus(theta)  # log(1+exp(theta))
-        LL = 0.5 * (theta * self.X).sum() - 0.5 * torch.sum(
+        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(
             softplus_theta - torch.diag(torch.diagonal(softplus_theta)))  # Times by 0.5 to avoid double counting
 
         return LL
 
     def link_prediction(self, A_test, idx_i_test, idx_j_test):
         with torch.no_grad():
-            S = F.softmax(self.S, dim=0)
+            X = F.softmax(self.X, dim=0)
             C = F.softmax(self.C, dim=0)
 
-            M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T  # Size of test set e.g. K x N
-            M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
+            M_i = torch.matmul(torch.matmul(X, C), X[:, idx_i_test]).T  # Size of test set e.g. K x N
+            M_j = torch.matmul(torch.matmul(X, C), X[:, idx_j_test]).T
             
 
 
@@ -97,10 +102,9 @@ if __name__ == "__main__":
     A = torch.from_numpy(A)
     k = 2
 
-    link_pred = True
+    link_pred = False
 
     if link_pred:
-        # https://dongkwan-kim.github.io/blogs/indices-for-the-upper-triangle-matrix/
         A_shape = A.shape
         num_samples = 15
         idx_i_test = torch.multinomial(input=torch.arange(0, float(A_shape[0])), num_samples=num_samples,
@@ -119,7 +123,7 @@ if __name__ == "__main__":
         A_test[idx_i_test, idx_j_test] = A[idx_i_test, idx_j_test]
         A[idx_i_test, idx_j_test] = 0
 
-    model = KAA(X=A, input_size=A.shape, k=k)
+    model = KAA(A=A, input_size=A.shape, k=k) #Is it here we determine the kernel?
     optimizer = torch.optim.Adam(params=model.parameters())
 
     losses = []
@@ -144,10 +148,10 @@ if __name__ == "__main__":
         plt.show()
 
     # Plotting latent space
-    S = F.softmax(model.S, dim=0)
+    X = F.softmax(model.X, dim=0)
     C = F.softmax(model.C, dim=0)
-    embeddings = torch.matmul(torch.matmul(S, C), S).T
-    archetypes = torch.matmul(S, C)
+    embeddings = torch.matmul(torch.matmul(X, C), X).T
+    archetypes = torch.matmul(X, C)
 
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
