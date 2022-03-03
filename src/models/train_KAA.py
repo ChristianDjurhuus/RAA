@@ -11,14 +11,15 @@ import networkx as nx
 class KAA(nn.Module):
     def __init__(self, A, input_size, k):
         super(KAA, self).__init__()
-        self.A = A
+        self.X = A.float()
         self.input_size = input_size
         self.k = k
+        self.K = self.kernel(self.X)
 
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
         self.a = torch.nn.Parameter(torch.randn(1))
 
-        self.X = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        self.S = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
 
 
@@ -27,47 +28,29 @@ class KAA(nn.Module):
 
         return None
 
-    def kernel(self, xt, x):
+    def kernel(self, X):
 
-        kernel = xt@x 
+        kernel = X.T@X
 
 
         return kernel
 
-    def log_likelihood(self):
-        '''We can re-write the last line by (s_i - s_j)^t C^tX^tXC (s_i - s_j) 
-        so if we construct a tensor storing S=(s_i - s_j) for all (i,j) pairs, 
-        it can be written by (CS)^tX^tX(CS) and the term, X^tX, can be replaced by any kernel function K(x, x).'''
+    def SSE(self):
+        
+        S = F.softmax(self.S, dim=0)
+        C = F.softmax(self.C, dim=0)
 
-        beta = self.beta.unsqueeze(1) + self.beta  # (N x N)
-        X = F.softmax(self.X, dim=0)  # (K x N)
-        C = F.softmax(self.C, dim=0)  # (N x K)
-        z_dist = torch.tensor(zeros(self.input_size))
-        for i in range(self.X.shape[1]):
-            for j in range(self.X.shape[1]):
-                S = self.X[:,i] - self.X[:,j]
-                CS = C@S
-                z_dist[i, j] = CS.T@self.kernel(X.T,X)@CS
-
-        theta = beta - self.a * z_dist  # (N x N)
-        softplus_theta = F.softplus(theta)  # log(1+exp(theta))
-        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(
-            softplus_theta - torch.diag(torch.diagonal(softplus_theta)))  # Times by 0.5 to avoid double counting
-
-        return LL
+        KC = self.K @ C 
+        CtKC = C.T @ self.K @ C
+        SSt = S @ S.T
+        SE = SSt - 2 * torch.sum( torch.sum( S.T *  KC)) + torch.sum(torch.sum(CtKC * SSt))
+        #SE = SSt - 2 * torch.inner(self.K@S.T, C) + torch.inner(CtKC, SSt) 
+        SSE = torch.sum(SE)
+        return SSE
 
     def link_prediction(self, A_test, idx_i_test, idx_j_test):
         with torch.no_grad():
-            X = F.softmax(self.X, dim=0)
-            C = F.softmax(self.C, dim=0)
 
-            M_i = torch.matmul(torch.matmul(X, C), X[:, idx_i_test]).T  # Size of test set e.g. K x N
-            M_j = torch.matmul(torch.matmul(X, C), X[:, idx_j_test]).T
-            
-
-
-            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-            theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test)  # N x N
 
             # Get the rate -> exp(log_odds)
             rate = torch.exp(theta).flatten()  # N^2
@@ -129,7 +112,7 @@ if __name__ == "__main__":
     losses = []
     iterations = 10000
     for _ in range(iterations):
-        loss = - model.log_likelihood() / model.input_size[0]
+        loss = - model.SSE() / model.input_size[0]
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -148,10 +131,10 @@ if __name__ == "__main__":
         plt.show()
 
     # Plotting latent space
-    X = F.softmax(model.X, dim=0)
+    S = F.softmax(model.S, dim=0)
     C = F.softmax(model.C, dim=0)
-    embeddings = torch.matmul(torch.matmul(X, C), X).T
-    archetypes = torch.matmul(X, C)
+    embeddings = torch.matmul(torch.matmul(S, C), S).T
+    archetypes = torch.matmul(S, C)
 
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
