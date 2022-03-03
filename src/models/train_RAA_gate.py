@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
 import networkx as nx 
+import seaborn as sns
 
 class RAA(nn.Module):
     def __init__(self, A, input_size, k):
@@ -29,7 +30,7 @@ class RAA(nn.Module):
         Z = F.softmax(self.Z, dim=0) #(K x N)
         G = F.sigmoid(self.G) #Sigmoid activation function
         #TODO: Ask Morten about the activation function. Should we have a binary G?
-        C = (Z.T * G) / (Z.T * G).sum() #Gating function
+        C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
         C = F.softmax(C, dim=0) #(N x K)
         M = torch.matmul(torch.matmul(Z, C), Z).T #(N x K)
         z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
@@ -43,7 +44,7 @@ class RAA(nn.Module):
         with torch.no_grad():
             Z = F.softmax(self.Z, dim=0)
             G = F.sigmoid(self.G)
-            C = (Z.T * G) / (Z.T * G).sum() #Gating function
+            C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
             C = F.softmax(C, dim=0)
 
             M_i = torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test]).T #Size of test set e.g. K x N
@@ -68,7 +69,7 @@ class RAA(nn.Module):
 
 
 if __name__ == "__main__": 
-    seed = 1999
+    seed = 1984
     torch.random.manual_seed(seed)
 
     #A = mmread("data/raw/soc-karate.mtx")
@@ -133,7 +134,7 @@ if __name__ == "__main__":
     Z = F.softmax(model.Z, dim=0)
     #C = F.softmax(model.C, dim=0)
     G = F.sigmoid(model.G)
-    C = (Z.T * G) / (Z.T * G).sum()
+    C = (Z.T * G) / (Z.T * G).sum(0)
     C = F.softmax(C, dim=0)
 
     embeddings = torch.matmul(torch.matmul(Z, C), Z).T
@@ -142,6 +143,10 @@ if __name__ == "__main__":
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
     idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    sns.heatmap(Z.detach().numpy(), cmap="YlGnBu", cbar=False, ax=ax1)
+    sns.heatmap(C.T.detach().numpy(), cmap="YlGnBu", cbar=False, ax=ax2)
 
     if embeddings.shape[1] == 3:
         fig = plt.figure()
@@ -166,3 +171,6 @@ if __name__ == "__main__":
         ax2.plot(losses)
         ax2.set_title("Loss")
     plt.show()
+
+
+
