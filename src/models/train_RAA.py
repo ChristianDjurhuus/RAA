@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
 import networkx as nx 
+import seaborn as sns
 
 class RAA(nn.Module):
     def __init__(self, A, input_size, k):
@@ -134,6 +135,10 @@ if __name__ == "__main__":
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
     idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    sns.heatmap(Z.detach().numpy(), cmap="YlGnBu", cbar=False, ax=ax1)
+    sns.heatmap(C.T.detach().numpy(), cmap="YlGnBu", cbar=False, ax=ax2)
 
     if embeddings.shape[1] == 3:
         fig = plt.figure()
