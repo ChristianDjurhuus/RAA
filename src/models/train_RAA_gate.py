@@ -29,9 +29,7 @@ class RAA(nn.Module):
         beta = self.beta.unsqueeze(1) + self.beta #(N x N)
         Z = F.softmax(self.Z, dim=0) #(K x N)
         G = F.sigmoid(self.G) #Sigmoid activation function
-        #TODO: Ask Morten about the activation function. Should we have a binary G?
         C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
-        C = F.softmax(C, dim=0) #(N x K)
         M = torch.matmul(torch.matmul(Z, C), Z).T #(N x K)
         z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = beta - self.a * z_dist #(N x N)
@@ -45,7 +43,6 @@ class RAA(nn.Module):
             Z = F.softmax(self.Z, dim=0)
             G = F.sigmoid(self.G)
             C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
-            C = F.softmax(C, dim=0)
 
             M_i = torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test]).T #Size of test set e.g. K x N
             M_j = torch.matmul(torch.matmul(Z, C), Z[:, idx_j_test]).T
@@ -132,10 +129,8 @@ if __name__ == "__main__":
 
     #Plotting latent space
     Z = F.softmax(model.Z, dim=0)
-    #C = F.softmax(model.C, dim=0)
     G = F.sigmoid(model.G)
     C = (Z.T * G) / (Z.T * G).sum(0)
-    C = F.softmax(C, dim=0)
 
     embeddings = torch.matmul(torch.matmul(Z, C), Z).T
     archetypes = torch.matmul(Z, C)

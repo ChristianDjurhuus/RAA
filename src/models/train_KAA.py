@@ -6,19 +6,18 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
 import networkx as nx
+from sklearn.metrics import pairwise_distances
+from sklearn.metrics import jaccard_score
 
 
 class KAA(nn.Module):
-    def __init__(self, A, input_size, k):
+    def __init__(self, X, input_size, k):
         super(KAA, self).__init__()
-        self.A = A
+        self.X = X
         self.input_size = input_size
         self.k = k
-
-        self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
-        self.a = torch.nn.Parameter(torch.randn(1))
-
-        self.X = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        self.K = self.kernel(self.X)
+        self.S = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
 
 
@@ -27,53 +26,37 @@ class KAA(nn.Module):
 
         return None
 
-    def kernel(self, xt, x):
-
-        kernel = xt@x 
-
-
+    def kernel(self, X, type='jaccard'):
+        #type: check pairwise_distances...
+        #kernel = X.T@X
+        kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
         return kernel
 
-    def log_likelihood(self):
-        '''We can re-write the last line by (s_i - s_j)^t C^tX^tXC (s_i - s_j) 
-        so if we construct a tensor storing S=(s_i - s_j) for all (i,j) pairs, 
-        it can be written by (CS)^tX^tX(CS) and the term, X^tX, can be replaced by any kernel function K(x, x).'''
+    def SSE(self):
+        S = F.softmax(self.S, dim=0)
+        C = F.softmax(self.C, dim=0)
+        KC = self.K @ C 
+        CtKC = C.T @ self.K @ C
+        SSt = S @ S.T
+        SSE = - 2 * torch.sum( torch.sum( S.T *  KC)) + torch.sum(torch.sum(CtKC * SSt))
+        return SSE
 
-        beta = self.beta.unsqueeze(1) + self.beta  # (N x N)
-        X = F.softmax(self.X, dim=0)  # (K x N)
-        C = F.softmax(self.C, dim=0)  # (N x K)
-        z_dist = torch.tensor(zeros(self.input_size))
-        for i in range(self.X.shape[1]):
-            for j in range(self.X.shape[1]):
-                S = self.X[:,i] - self.X[:,j]
-                CS = C@S
-                z_dist[i, j] = CS.T@self.kernel(X.T,X)@CS
-
-        theta = beta - self.a * z_dist  # (N x N)
-        softplus_theta = F.softplus(theta)  # log(1+exp(theta))
-        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(
-            softplus_theta - torch.diag(torch.diagonal(softplus_theta)))  # Times by 0.5 to avoid double counting
-
-        return LL
-
-    def link_prediction(self, A_test, idx_i_test, idx_j_test):
+    def link_prediction(self, X_test, idx_i_test, idx_j_test):
         with torch.no_grad():
-            X = F.softmax(self.X, dim=0)
+            S= F.softmax(self.S, dim=0)
             C = F.softmax(self.C, dim=0)
 
-            M_i = torch.matmul(torch.matmul(X, C), X[:, idx_i_test]).T  # Size of test set e.g. K x N
-            M_j = torch.matmul(torch.matmul(X, C), X[:, idx_j_test]).T
-            
-
-
-            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-            theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test)  # N x N
+            M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
+            M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
+            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+            #z_pdist_test = torch.from_numpy(pairwise_distances(M_i, M_j, "jaccard"))
+            theta = z_pdist_test # N x N
 
             # Get the rate -> exp(log_odds)
             rate = torch.exp(theta).flatten()  # N^2
 
             # Create target (make sure its in the right order by indexing)
-            target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten()  # N^2
+            target = X_test[idx_i_test.unsqueeze(1), idx_j_test].flatten()  # N^2
 
             fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
 
@@ -98,38 +81,38 @@ if __name__ == "__main__":
     club_labels = nx.get_node_attributes(ZKC_graph, 'club')
 
     # Getting adjacency matrix
-    A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
-    A = torch.from_numpy(A)
+    X = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
+    X = torch.from_numpy(X).float()
     k = 2
 
-    link_pred = False
+    link_pred = True
 
     if link_pred:
-        A_shape = A.shape
+        X_shape = X.shape
         num_samples = 15
-        idx_i_test = torch.multinomial(input=torch.arange(0, float(A_shape[0])), num_samples=num_samples,
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])), num_samples=num_samples,
                                        replacement=True)
         idx_j_test = torch.tensor(zeros(num_samples)).long()
         for i in range(len(idx_i_test)):
-            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(A_shape[1]))[
-                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(A_shape[1])), num_samples=1,
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(X_shape[1]))[
+                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(X_shape[1])), num_samples=1,
                                   replacement=True).item()].item()  # Temp solution to sample from upper corner
 
         # idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
         #                               replacement=True)
 
-        A_test = A.detach().clone()
-        A_test[:] = 0
-        A_test[idx_i_test, idx_j_test] = A[idx_i_test, idx_j_test]
-        A[idx_i_test, idx_j_test] = 0
+        X_test = X.detach().clone()
+        X_test[:] = 0
+        X_test[idx_i_test, idx_j_test] = X[idx_i_test, idx_j_test]
+        X[idx_i_test, idx_j_test] = 0
 
-    model = KAA(A=A, input_size=A.shape, k=k) #Is it here we determine the kernel?
+    model = KAA(X=X, input_size=X.shape, k=k) #Is it here we determine the kernel?
     optimizer = torch.optim.Adam(params=model.parameters())
 
     losses = []
     iterations = 10000
     for _ in range(iterations):
-        loss = - model.log_likelihood() / model.input_size[0]
+        loss = model.SSE() / model.input_size[0]
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -138,7 +121,7 @@ if __name__ == "__main__":
 
     # Link prediction
     if link_pred:
-        auc_score, fpr, tpr = model.link_prediction(A_test, idx_i_test, idx_j_test)
+        auc_score, fpr, tpr = model.link_prediction(X_test, idx_i_test, idx_j_test)
         plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % auc_score)
         plt.plot([0, 1], [0, 1], 'r--', label='random')
         plt.legend(loc='lower right')
@@ -148,10 +131,10 @@ if __name__ == "__main__":
         plt.show()
 
     # Plotting latent space
-    X = F.softmax(model.X, dim=0)
+    S = F.softmax(model.S, dim=0)
     C = F.softmax(model.C, dim=0)
-    embeddings = torch.matmul(torch.matmul(X, C), X).T
-    archetypes = torch.matmul(X, C)
+    embeddings = torch.matmul(torch.matmul(S, C), S).T
+    archetypes = torch.matmul(S, C)
 
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
@@ -172,7 +155,7 @@ if __name__ == "__main__":
                 embeddings[John_A, 2].detach().numpy(), 'Officer')
         ax.set_title(f"Latent space after {iterations} iterations")
         ax.legend()
-    else:
+    if embeddings.shape[1] == 2:
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.scatter(embeddings[:, 0].detach().numpy()[idx_hi], embeddings[:, 1].detach().numpy()[idx_hi], c='red',
                     label='Mr. Hi')
