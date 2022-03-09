@@ -6,11 +6,12 @@ import torch.nn.functional as F
 from sklearn import metrics
 import networkx as nx 
 import numpy as np
-import umap
-import umap.plot
+#import umap
+#import umap.plot
+from torch_sparse import spspmm
 
 class LSM(nn.Module):
-    def __init__(self, A, input_size, latent_dim):
+    def __init__(self, A, input_size, latent_dim, sampling_weights, sample_size, edge_list):
         super(LSM, self).__init__()
         self.A = A
         self.input_size = input_size
@@ -19,37 +20,77 @@ class LSM(nn.Module):
         self.alpha = torch.nn.Parameter(torch.randn(1))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim))
 
+        self.missing_data = False
+        self.sampling_weights = sampling_weights
+        self.sample_size = sample_size
+        self.sparse_i_idx = edge_list[0]
+        self.sparse_j_idx = edge_list[1]
 
-    def random_sampling(self):
-        #TODO
 
-        return None
+    def sample_network(self):
+        # USE torch_sparse lib i.e. : from torch_sparse import spspmm
+
+        # sample for undirected network
+        sample_idx = torch.multinomial(self.sampling_weights, self.sample_size, replacement=False)
+        # translate sampled indices w.r.t. to the full matrix, it is just a diagonal matrix
+        indices_translator = torch.cat([sample_idx.unsqueeze(0), sample_idx.unsqueeze(0)], 0)
+        # adjacency matrix in edges format
+        edges = torch.cat([self.sparse_i_idx.unsqueeze(0), self.sparse_j_idx.unsqueeze(0)], 0)
+        # matrix multiplication B = Adjacency x Indices translator
+        # see spspmm function, it give a multiplication between two matrices
+        # indexC is the indices where we have non-zero values and valueC the actual values (in this case ones)
+        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1]), indices_translator,
+                                torch.ones(indices_translator.shape[1]), self.input_size[0], self.input_size[0],
+                                self.input_size[0], coalesced=True)
+        # second matrix multiplication C = Indices translator x B, indexC returns where we have edges inside the sample
+        indexC, valueC = spspmm(indices_translator, torch.ones(indices_translator.shape[1]), indexC, valueC,
+                                self.input_size[0], self.input_size[0], self.input_size[0], coalesced=True)
+
+        # edge row position
+        sparse_i_sample = indexC[0, :]
+        # edge column position
+        sparse_j_sample = indexC[1, :]
+
+        return sample_idx, sparse_i_sample, sparse_j_sample
 
     def log_likelihood(self):
+        sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
 
-        z_dist = ((self.latent_Z.unsqueeze(1) - self.latent_Z + 1e-06)**2).sum(-1)**0.5 # (N x N)
+        mat = torch.exp(-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
+        #For the nodes without links
+        z_pdist1 = torch.exp(self.alpha) * (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0]).unsqueeze(0)),
+                                                          (torch.mm((mat - torch.diag(torch.diagonal(mat))),
+                                                                    torch.exp(torch.ones(sample_idx.shape[0])).unsqueeze(-1)))))
+
+        #For the nodes with links
+        z_pdist2 = (-((((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1))) ** 0.5 + self.alpha).sum()
+
+        log_likelihood_sparse = z_pdist2 - z_pdist1
+
+        return log_likelihood_sparse
+        '''z_dist = ((self.latent_Z.unsqueeze(1) - self.latent_Z + 1e-06)**2).sum(-1)**0.5 # (N x N)
         theta = self.alpha - z_dist #(N x N)
         softplus_theta = F.softplus(theta) # log(1+exp(theta))
         LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta))) #Times by 0.5 to avoid double counting
 
-        return LL
-    
+        return LL'''
+
     def link_prediction(self, A_test, idx_i_test, idx_j_test):
         with torch.no_grad():
 
             z_pdist_test = ((self.latent_Z[idx_i_test, :].unsqueeze(1) - self.latent_Z[idx_j_test, :] + 1e-06)**2).sum(-1)**0.5 # N x N 
-            theta = self.alpha + self.beta - z_pdist_test #(N x N)
+            theta = self.alpha - z_pdist_test #(N x N)
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta).flatten() # N^2 
 
             #Create target (make sure its in the right order by indexing)
-            target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten() #N^2
+            target = A_test[idx_i_test, idx_j_test].flatten() #N^2
 
-            fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
+            fpr, tpr, threshold = metrics.roc_curve(target.numpy().reshape(-1), rate.numpy())
 
             #Determining AUC score and precision and recall
-            auc_score = metrics.roc_auc_score(target.cpu().data.numpy(), rate.cpu().data.numpy())
+            auc_score = metrics.roc_auc_score(target.cpu().data.numpy().reshape(-1), rate.cpu().data.numpy())
 
             return auc_score, fpr, tpr
 
@@ -64,7 +105,9 @@ if __name__ == "__main__":
     #Let's keep track of which nodes represent John A and Mr Hi
     Mr_Hi = 0
     John_A = 33
-
+    edge_list = np.array(list(map(list,ZKC_graph.edges()))).T
+    edge_list.sort(axis=1)  # Sort in order to recieve the upper triangular part of the adjacency matrix
+    edge_list = torch.from_numpy(edge_list).long()
     #Let's display the labels of which club each member ended up joining
     club_labels = nx.get_node_attributes(ZKC_graph,'club')
 
@@ -73,7 +116,7 @@ if __name__ == "__main__":
     A = torch.from_numpy(A)
     latent_dim = 2
 
-    link_pred = True
+    link_pred = False
 
     if link_pred:
         A_shape = A.shape
@@ -82,12 +125,14 @@ if __name__ == "__main__":
                                        replacement=True)
         idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
                                        replacement=True)
+        A[A > 0] = 1
         A_test = A.detach().clone()
         A_test[:] = 0
         A_test[idx_i_test, idx_j_test] = A[idx_i_test,idx_j_test]
+
         A[idx_i_test, idx_j_test] = 0
 
-    model = LSM(A = A, input_size = A.shape, latent_dim=latent_dim)
+    model = LSM(A = A, input_size = A.shape, latent_dim=latent_dim, sampling_weights=torch.ones(A.shape[0]), sample_size=20, edge_list=edge_list)
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
@@ -145,7 +190,7 @@ if __name__ == "__main__":
         #pos = {i: latent_Z[i, :] for i in range(A.shape[0])}
         #nx.draw(ZKC_graph, with_labels=True, pos=pos)
         #plt.show()
-
+'''
     if latent_Z.shape[1] > 3:
         embedding = umap.UMAP().fit_transform(latent_Z)
         color_dict = {"Mr. Hi":"red", "Officer":"blue"}
@@ -159,3 +204,4 @@ if __name__ == "__main__":
         plt.gca().set_aspect('equal', 'datalim')
         plt.title(f'UMAP projection of the latent space with dim: {latent_Z.shape[1]}')
         plt.show()
+'''
