@@ -11,8 +11,9 @@ import numpy as np
 from torch_sparse import spspmm
 
 class LSM(nn.Module):
-    def __init__(self, input_size, latent_dim, sampling_weights, sample_size, edge_list):
+    def __init__(self, A, input_size, latent_dim, sampling_weights, sample_size, edge_list):
         super(LSM, self).__init__()
+        self.A = A
         self.input_size = input_size
         self.latent_dim = latent_dim
 
@@ -67,20 +68,29 @@ class LSM(nn.Module):
         log_likelihood_sparse = z_pdist2 - z_pdist1
 
         return log_likelihood_sparse
+        '''z_dist = ((self.latent_Z.unsqueeze(1) - self.latent_Z + 1e-06)**2).sum(-1)**0.5 # (N x N)
+        theta = self.alpha - z_dist #(N x N)
+        softplus_theta = F.softplus(theta) # log(1+exp(theta))
+        LL = 0.5 * (theta * self.A).sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta))) #Times by 0.5 to avoid double counting
 
-    def link_prediction(self, target, idx_i_test, idx_j_test):
+        return LL'''
+
+    def link_prediction(self, A_test, idx_i_test, idx_j_test):
         with torch.no_grad():
 
-            z_pdist_test = ((self.latent_Z[idx_i_test,:] - self.latent_Z[idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
-            theta = self.alpha - z_pdist_test #(Sample_size)
+            z_pdist_test = ((self.latent_Z[idx_i_test, :].unsqueeze(1) - self.latent_Z[idx_j_test, :] + 1e-06)**2).sum(-1)**0.5 # N x N 
+            theta = self.alpha - z_pdist_test #(N x N)
 
             #Get the rate -> exp(log_odds) 
-            rate = torch.exp(theta) # Sample_size
+            rate = torch.exp(theta).flatten() # N^2 
 
-            fpr, tpr, threshold = metrics.roc_curve(target, rate.numpy())
+            #Create target (make sure its in the right order by indexing)
+            target = A_test[idx_i_test, idx_j_test].flatten() #N^2
+
+            fpr, tpr, threshold = metrics.roc_curve(target.numpy().reshape(-1), rate.numpy())
 
             #Determining AUC score and precision and recall
-            auc_score = metrics.roc_auc_score(target, rate.cpu().data.numpy())
+            auc_score = metrics.roc_auc_score(target.cpu().data.numpy().reshape(-1), rate.cpu().data.numpy())
 
             return auc_score, fpr, tpr
 
@@ -89,54 +99,40 @@ if __name__ == "__main__":
     seed = 1984
     torch.random.manual_seed(seed)
 
-
+    #A = mmread("data/raw/soc-karate.mtx")
+    #A = A.todense()
     ZKC_graph = nx.karate_club_graph()
     #Let's keep track of which nodes represent John A and Mr Hi
     Mr_Hi = 0
     John_A = 33
-
-    #Get the edge list
     edge_list = np.array(list(map(list,ZKC_graph.edges()))).T
-    #edge_list.sort(axis=1)  #TODO: Sort in order to recieve the upper triangular part of the adjacency matrix
+    edge_list.sort(axis=1)  # Sort in order to recieve the upper triangular part of the adjacency matrix
     edge_list = torch.from_numpy(edge_list).long()
-
-    #Get N and latent_dim (k)
-    N = len(ZKC_graph.nodes())
-    latent_dim = 2
-
     #Let's display the labels of which club each member ended up joining
     club_labels = nx.get_node_attributes(ZKC_graph,'club')
 
     #Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
+    latent_dim = 2
 
-    link_pred = True
+    link_pred = False
 
     if link_pred:
-        num_samples = 15
-        idx_i_test = torch.multinomial(input=torch.arange(0, float(N)), num_samples=num_samples,
+        A_shape = A.shape
+        num_samples = 10
+        idx_i_test = torch.multinomial(input=torch.arange(0,float(A_shape[0])), num_samples=num_samples,
                                        replacement=True)
-        idx_j_test = torch.tensor(np.zeros(num_samples)).long()
-        for i in range(len(idx_i_test)):
-            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(N))[
-                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(N)), num_samples=1,
-                                  replacement=True).item()].item()  # Temp solution to sample from upper corner
+        idx_j_test = torch.multinomial(input=torch.arange(0, float(A_shape[1])), num_samples=num_samples,
+                                       replacement=True)
+        A[A > 0] = 1
+        A_test = A.detach().clone()
+        A_test[:] = 0
+        A_test[idx_i_test, idx_j_test] = A[idx_i_test,idx_j_test]
 
-        test = torch.stack((idx_i_test,idx_j_test))
+        A[idx_i_test, idx_j_test] = 0
 
-        #TODO: could be a killer.. maybe do it once and save adjacency list ;)
-        def if_edge(a, edge_list):
-            a = a.tolist()
-            edge_list = edge_list.tolist()
-            a = list(zip(a[0], a[1]))
-            edge_list = list(zip(edge_list[0], edge_list[1]))
-            return [a[i] in edge_list for i in range(len(a))]
-
-        target = if_edge(test, edge_list)
-
-
-    model = LSM(input_size = (N,N), latent_dim=latent_dim, sampling_weights=torch.ones(N), sample_size=20, edge_list=edge_list)
+    model = LSM(A = A, input_size = A.shape, latent_dim=latent_dim, sampling_weights=torch.ones(A.shape[0]), sample_size=20, edge_list=edge_list)
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
@@ -151,7 +147,7 @@ if __name__ == "__main__":
     
     #Link prediction
     if link_pred:
-        auc_score, fpr, tpr = model.link_prediction(target, idx_i_test, idx_j_test)
+        auc_score, fpr, tpr = model.link_prediction(A_test, idx_i_test, idx_j_test)
         plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % auc_score)
         plt.plot([0, 1], [0, 1],'r--', label='random')
         plt.legend(loc = 'lower right')
