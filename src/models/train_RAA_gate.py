@@ -17,7 +17,8 @@ class RAA(nn.Module):
 
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
         self.a = torch.nn.Parameter(torch.randn(1))
-        self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        #self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
         self.G = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
     def random_sampling(self):
         #TODO
@@ -104,10 +105,10 @@ if __name__ == "__main__":
         A[idx_i_test, idx_j_test] = 0
 
     model = RAA(A = A, input_size = A.shape, k=k)
-    optimizer = torch.optim.Adam(params=model.parameters())
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0001)
     
     losses = []
-    iterations = 10000
+    iterations = 100000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()

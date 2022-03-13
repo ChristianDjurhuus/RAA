@@ -62,7 +62,7 @@ class LSM(nn.Module):
                                                                     torch.exp(torch.ones(sample_idx.shape[0])).unsqueeze(-1)))))
 
         #For the nodes with links
-        z_pdist2 = (-((((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1))) ** 0.5 + self.alpha).sum()
+        z_pdist2 = (-((((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1))) ** 0.5 + self.alpha).sum() #why plus alpha?
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
 
