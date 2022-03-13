@@ -33,7 +33,7 @@ class KAA(nn.Module):
             kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
         if type == 'parcellating': #TODO: Does not seem to learn the structure.
             temp = ((X.unsqueeze(1) - X + 1e-06)**2).sum(-1)
-            kernel = torch.sqrt(2 * (temp - torch.diag(torch.diagonal(temp))))
+            kernel = (2 * (temp - torch.diag(torch.diagonal(temp))))**0.5
         return kernel
 
     def SSE(self):
@@ -178,3 +178,5 @@ if __name__ == "__main__":
         ax2.plot(losses)
         ax2.set_title("Loss")
     plt.show()
+
+torch.save(S.detach(), "src/models/S_initial.pt")
