@@ -46,14 +46,14 @@ class RAA(nn.Module):
 
             M_i = torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test]).T #Size of test set e.g. K x N
             M_j = torch.matmul(torch.matmul(Z, C), Z[:, idx_j_test]).T
-            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+            z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
             theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - self.a * z_pdist_test) # N x N
 
             #Get the rate -> exp(log_odds) 
-            rate = torch.exp(theta).flatten() # N^2 
+            rate = torch.exp(theta) # N
 
             #Create target (make sure its in the right order by indexing)
-            target = A_test[idx_i_test.unsqueeze(1), idx_j_test].flatten() #N^2
+            target = A_test[idx_i_test, idx_j_test] #N
 
 
             fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
@@ -66,7 +66,7 @@ class RAA(nn.Module):
 
 
 if __name__ == "__main__": 
-    seed = 1984
+    seed = 4
     torch.random.manual_seed(seed)
 
     #A = mmread("data/raw/soc-karate.mtx")
