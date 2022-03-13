@@ -29,7 +29,11 @@ class KAA(nn.Module):
     def kernel(self, X, type='jaccard'):
         #type: check pairwise_distances...
         #kernel = X.T@X
-        kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
+        if type == 'jaccard':
+            kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
+        if type == 'parcellating': #TODO: Does not seem to learn the structure.
+            temp = ((X.unsqueeze(1) - X + 1e-06)**2).sum(-1)
+            kernel = torch.sqrt(2 * (temp - torch.diag(torch.diagonal(temp))))
         return kernel
 
     def SSE(self):
@@ -43,20 +47,22 @@ class KAA(nn.Module):
 
     def link_prediction(self, X_test, idx_i_test, idx_j_test):
         with torch.no_grad():
-            S= F.softmax(self.S, dim=0)
+            S = F.softmax(self.S, dim=0)
             C = F.softmax(self.C, dim=0)
 
             M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
             M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
-            z_pdist_test = ((M_i.unsqueeze(1) - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+            #M_i = torch.matmul(torch.matmul(self.X, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
+            #M_j = torch.matmul(torch.matmul(self.X, C), S[:, idx_j_test]).T
+            z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
             #z_pdist_test = torch.from_numpy(pairwise_distances(M_i, M_j, "jaccard"))
             theta = z_pdist_test # N x N
 
             # Get the rate -> exp(log_odds)
-            rate = torch.exp(theta).flatten()  # N^2
+            rate = torch.exp(theta)  # N
 
             # Create target (make sure its in the right order by indexing)
-            target = X_test[idx_i_test.unsqueeze(1), idx_j_test].flatten()  # N^2
+            target = X_test[idx_i_test, idx_j_test]  # N
 
             fpr, tpr, threshold = metrics.roc_curve(target.numpy(), rate.numpy())
 
@@ -138,8 +144,9 @@ if __name__ == "__main__":
 
     labels = list(club_labels.values())
     idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
+    size_hi = [x for i, x in ZKC_graph.degree() if club_labels[i] == "Mr. Hi"]
     idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
-
+    size_of = [x for i, x in ZKC_graph.degree() if club_labels[i] == "Officer"]
     if embeddings.shape[1] == 3:
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
@@ -155,12 +162,13 @@ if __name__ == "__main__":
                 embeddings[John_A, 2].detach().numpy(), 'Officer')
         ax.set_title(f"Latent space after {iterations} iterations")
         ax.legend()
+
     if embeddings.shape[1] == 2:
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.scatter(embeddings[:, 0].detach().numpy()[idx_hi], embeddings[:, 1].detach().numpy()[idx_hi], c='red',
-                    label='Mr. Hi')
+                    label='Mr. Hi', s=size_hi)
         ax1.scatter(embeddings[:, 0].detach().numpy()[idx_of], embeddings[:, 1].detach().numpy()[idx_of], c='blue',
-                    label='Officer')
+                    label='Officer', s=size_of)
         ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
         ax1.annotate('Mr. Hi', embeddings[Mr_Hi, :])
         ax1.annotate('Officer', embeddings[John_A, :])
