@@ -18,9 +18,10 @@ class DRRAA(nn.Module):
         self.d = d
 
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
+        self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k))
-        #self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
-        self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
+        self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
+        #self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
         self.G = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
 
         self.missing_data = False
@@ -58,11 +59,9 @@ class DRRAA(nn.Module):
 
     def log_likelihood(self):
         sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
-
         Z = F.softmax(self.Z, dim=0) #(K x N)
         G = F.sigmoid(self.G) #Sigmoid activation function
         C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
-
         #For the nodes without links
         beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
         AZCz = torch.mm(self.A, torch.mm(torch.mm(Z[:,sample_idx], C[sample_idx,:]), Z[:,sample_idx])).T
@@ -70,28 +69,11 @@ class DRRAA(nn.Module):
         z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0]).unsqueeze(0)),
                                                           (torch.mm((mat - torch.diag(torch.diagonal(mat))),
                                                                     torch.exp(torch.ones(sample_idx.shape[0])).unsqueeze(-1)))))
-
         #For the nodes with links
-        AZC = torch.mm(self.A, torch.mm(Z,C)) #This could perhaps be a computational issue
+        AZC = torch.mm(self.A, torch.mm(Z[:, sample_idx],C[sample_idx, :])) #This could perhaps be a computational issue
         z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
-
-
-        #AZC = torch.matmul(self.A, torch.matmul(Z C))
-        
-        #beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
-        #M_1 = torch.matmul(AZC, Z[:, sample_idx]).T
-        #For nodes without links
-        #z_pdist1 = ((M_1.unsqueeze(1) - M_1 + 1e-06)**2).sum(-1)**0.5
-        #theta = beta - z_pdist1
-        #softplus_theta = F.softplus(theta)
-        #nodes with links
-        #z_pdist2 = ((torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.matmul(AZC, Z[:, sparse_sample_j]).T + 1e-06)**2).sum(-1)**0.5
-        #beta_links = self.beta[sparse_sample_i].unsqueeze(1) + self.beta[sparse_sample_j]
-
-        #log_Lambda_links = beta_links - z_pdist2
-        #LL = 0.5 * log_Lambda_links.sum() - 0.5 * torch.sum(softplus_theta-torch.diag(torch.diagonal(softplus_theta)))
         return log_likelihood_sparse
     
 
@@ -119,7 +101,7 @@ class DRRAA(nn.Module):
 
 
 if __name__ == "__main__": 
-    seed = 1984
+    seed = 4
     torch.random.manual_seed(seed)
 
     #A = mmread("data/raw/soc-karate.mtx")
@@ -173,10 +155,10 @@ if __name__ == "__main__":
                     sample_size=20,
                     edge_list=edge_list)
 
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
     
     losses = []
-    iterations = 100000
+    iterations = 10000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
