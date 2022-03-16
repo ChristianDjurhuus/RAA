@@ -19,6 +19,7 @@ class KAA(nn.Module):
         self.K = self.kernel(self.X)
         self.S = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
+        self.a = torch.nn.Parameter(torch.randn(1))
 
 
     def random_sampling(self):
@@ -27,7 +28,7 @@ class KAA(nn.Module):
         return None
 
     def kernel(self, X, type='jaccard'):
-        #type: check pairwise_distances...
+        #type: #check pairwise_distances...
         #kernel = X.T@X
         if type == 'jaccard':
             kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
