@@ -166,7 +166,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
 
     losses = []
-    iterations = 10000
+    iterations = 100000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()

@@ -16,7 +16,7 @@ class KAA(nn.Module):
         self.X = X
         self.input_size = input_size
         self.k = k
-        self.K = self.kernel(self.X)
+        self.K = self.kernel(self.X, type='laplacian')
         self.S = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.C = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
         self.a = torch.nn.Parameter(torch.randn(1))
@@ -35,6 +35,11 @@ class KAA(nn.Module):
         if type == 'parcellating': #TODO: Does not seem to learn the structure.
             temp = ((X.unsqueeze(1) - X + 1e-06)**2).sum(-1)
             kernel = (2 * (temp - torch.diag(torch.diagonal(temp))))**0.5
+        if type == 'normalised_x':
+            kernel = X @ X.T / (X @ X.T).sum(0) #TODO: Sum row or column wise?
+        if type == 'laplacian':
+            D = torch.diag(X.sum(1))
+            kernel = D - X #TODO: weird space..
         return kernel
 
     def SSE(self):
@@ -134,7 +139,7 @@ if __name__ == "__main__":
         plt.legend(loc='lower right')
         plt.xlabel("False positive rate")
         plt.ylabel("True positive rate")
-        plt.title("RAA model")
+        plt.title("KAA model")
         plt.show()
 
     # Plotting latent space
@@ -180,4 +185,4 @@ if __name__ == "__main__":
         ax2.set_title("Loss")
     plt.show()
 
-torch.save(S.detach(), "src/models/S_initial.pt")
+#torch.save(S.detach(), "src/models/S_initial.pt")
