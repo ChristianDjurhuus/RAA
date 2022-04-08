@@ -21,8 +21,6 @@ def synthetic_data(k, alpha, nsamples):
     for i in range(k):
         A[:,i] = np.random.rand(k,1).reshape(k,)
 
-    #A = np.array([[0,0,0], [10,10,0], [20,0,0]])
-
     Z = np.zeros((k, nsamples))
     for i in range(nsamples):
         Z[:,i] = np.random.dirichlet(alpha)
@@ -49,7 +47,7 @@ def generate_network_bias(A, Z, k, d, rand = False):
     A = f.softmax(A, dim=1)
     Z = torch.from_numpy(Z).float() #Already sums to one
     if rand:
-        beta = torch.randn(nsamples) #Should be symmetrical right? 
+        beta = torch.randn(nsamples)
         dim_matrix = torch.rand(d, k)
     else:
         beta = torch.zeros(nsamples)
@@ -72,7 +70,7 @@ k = 3
 alpha = 0.2
 nsamples=36
 synth_data, A, Z = synthetic_data(k, alpha, nsamples)
-adj_m = generate_network_bias(A, Z, k, d, rand=True) #Should this be symmetric?
+adj_m = generate_network_bias(A, Z, k, d, rand=True)
 
 #Calculating density
 xy = np.vstack((synth_data[:,1], synth_data[:,2]))
