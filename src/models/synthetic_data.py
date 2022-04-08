@@ -1,4 +1,3 @@
-import dataclasses
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
@@ -36,7 +35,7 @@ def logit2prob(logit):
     probs = (odds) / (1+odds)
     return probs
 
-def generate_network_bias(A, Z, k, d, rand = False):
+def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     ''' Generate adj matrix, Undirected case & without dimensionality reduction
             Z: samples drawn from dirichlet distribution
             A: Archetypes
@@ -64,34 +63,35 @@ def generate_network_bias(A, Z, k, d, rand = False):
     adj_m = tril + tril.T - torch.diag(torch.diagonal(adj_m))
     return adj_m
 
+def main():
+    d = 3
+    k = 3
+    alpha = 0.2
+    nsamples=36
+    synth_data, A, Z = synthetic_data(k, alpha, nsamples)
+    adj_m = generate_network_bias(A, Z, k, d, nsamples, rand=True)
 
-d = 3
-k = 3
-alpha = 0.2
-nsamples=36
-synth_data, A, Z = synthetic_data(k, alpha, nsamples)
-adj_m = generate_network_bias(A, Z, k, d, rand=True)
+    #Calculating density
+    xy = np.vstack((synth_data[:,1], synth_data[:,2]))
+    z = gaussian_kde(xy)(xy)
+    if synth_data.shape[1] == 3:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1],
+                    synth_data[:, 2], c=z, cmap='viridis')
+        ax.scatter(A[0, :], A[1, :],
+                    A[2, :], marker='^', c='black', label="Archetypes")
+        ax.set_title(f"True Latent Space")
+        fig.colorbar(sc, label="Density")
+        ax.legend()
+    plt.show()
 
-#Calculating density
-xy = np.vstack((synth_data[:,1], synth_data[:,2]))
-z = gaussian_kde(xy)(xy)
-if synth_data.shape[1] == 3:
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1],
-                synth_data[:, 2], c=z, cmap='viridis')
-    ax.scatter(A[0, :], A[1, :],
-                A[2, :], marker='^', c='black', label="Archetypes")
-    ax.set_title(f"True Latent Space")
-    fig.colorbar(sc, label="Density")
-    ax.legend()
-plt.show()
-
-plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
-plt.show()
+    plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
+    plt.show()
 
 
-
+if __name__ == "__main__":
+    main()
 
 
 
