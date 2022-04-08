@@ -1,3 +1,4 @@
+import dataclasses
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
@@ -60,6 +61,9 @@ def generate_network_bias(A, Z, k, d, rand = False):
     theta = beta_matrix - z_dist # (N x N) - log_odds
     probs = logit2prob(theta)
     adj_m = torch.bernoulli(probs) # bernoullig distribution to get links
+    #Making adjacency matrix symmetric using upper triangle
+    tril = torch.triu(adj_m)
+    adj_m = tril + tril.T - torch.diag(torch.diagonal(adj_m))
     return adj_m
 
 
@@ -85,7 +89,7 @@ if synth_data.shape[1] == 3:
     ax.legend()
 plt.show()
 
-plt.imshow(adj_m, interpolation='nearest')
+plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
 plt.show()
 
 
