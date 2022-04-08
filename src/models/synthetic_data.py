@@ -9,11 +9,10 @@ import torch.nn.functional as f
 
 def synthetic_data(k, alpha, nsamples):
     '''
-    Sample synthetic data
+    Randomly uniformly sample of data within a predefined polytope ((k-1)-simplex) using the Dirichlet distribution
         k: number of archetypes
         alpha: parameter in dirichlet distribution
         nsamples: number of samples
-    
     '''
 
     alpha = [alpha for i in range(k)]
@@ -29,31 +28,9 @@ def synthetic_data(k, alpha, nsamples):
 
     return np.matmul(A, Z).T, A, Z
 
-
-d = 3
-k = 3
-alpha = 0.2
-nsamples=36
-synth_data, A, Z = synthetic_data(k, alpha, nsamples)
-
-#Calculating density
-xy = np.vstack((synth_data[:,1], synth_data[:,2]))
-z = gaussian_kde(xy)(xy)
-
-if synth_data.shape[1] == 3:
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1],
-                synth_data[:, 2], c=z, cmap='viridis')
-    ax.scatter(A[0, :], A[1, :],
-                A[2, :], marker='^', c='black', label="Archetypes")
-    ax.set_title(f"True Latent Space")
-    fig.colorbar(sc, label="Density")
-    ax.legend()
-plt.show()
-
 def logit2prob(logit):
     '''
+    utils function //
     Convert logit to probability
     '''
     odds = torch.exp(logit)
@@ -86,9 +63,28 @@ def generate_network_bias(A, Z, k, d, rand = False):
     return adj_m
 
 
-
-
+d = 3
+k = 3
+alpha = 0.2
+nsamples=36
+synth_data, A, Z = synthetic_data(k, alpha, nsamples)
 adj_m = generate_network_bias(A, Z, k, d, rand=True) #Should this be symmetric?
+
+#Calculating density
+xy = np.vstack((synth_data[:,1], synth_data[:,2]))
+z = gaussian_kde(xy)(xy)
+if synth_data.shape[1] == 3:
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1],
+                synth_data[:, 2], c=z, cmap='viridis')
+    ax.scatter(A[0, :], A[1, :],
+                A[2, :], marker='^', c='black', label="Archetypes")
+    ax.set_title(f"True Latent Space")
+    fig.colorbar(sc, label="Density")
+    ax.legend()
+plt.show()
+
 plt.imshow(adj_m, interpolation='nearest')
 plt.show()
 
