@@ -110,7 +110,7 @@ if __name__ == "__main__":
     #Getting adjacency matrix
     A = nx.convert_matrix.to_numpy_matrix(ZKC_graph)
     A = torch.from_numpy(A)
-
+    AA = True
     link_pred = True
 
     if link_pred:
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         target = if_edge(test, edge_list)
 
 
-    model = LSM(input_size = (N,N), latent_dim=latent_dim, sampling_weights=torch.ones(N), sample_size=20, edge_list=edge_list)
+    model = LSM(input_size = (N,N), latent_dim=latent_dim, sampling_weights=torch.ones(N), sample_size=34, edge_list=edge_list)
     optimizer = torch.optim.Adam(params=model.parameters())
     
     losses = []
@@ -148,6 +148,41 @@ if __name__ == "__main__":
         optimizer.step()
         losses.append(loss.item())
         print('Loss at the',_,'iteration:',loss.item())
+
+    if AA:
+        import archetypes
+        aa = archetypes.AA(n_archetypes=2)
+        latent_Z_trans = aa.fit_transform(model.latent_Z.detach().numpy())
+
+        labels = list(club_labels.values())
+        idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
+        idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
+
+        if latent_Z_trans.shape[1] == 3:
+            fig = plt.figure()
+            ax = fig.add_subplot(projection='3d')
+            ax.scatter(latent_Z_trans[:, 0][idx_hi], latent_Z_trans[:, 1][idx_hi], latent_Z_trans[:, 2][idx_hi], c='red', label='Mr. Hi')
+            ax.scatter(latent_Z_trans[:, 0][idx_of], latent_Z_trans[:, 1][idx_of], latent_Z_trans[:, 2][idx_of], c='blue',
+                       label='Officer')
+            ax.text(latent_Z_trans[Mr_Hi, 0], latent_Z_trans[Mr_Hi, 1], latent_Z_trans[Mr_Hi, 2], 'Mr. Hi')
+            ax.text(latent_Z_trans[John_A, 0], latent_Z_trans[John_A, 1], latent_Z_trans[John_A, 2], 'Officer')
+            ax.set_title(f"Latent space after {iterations} iterations and AA on embeddings")
+            ax.legend()
+            plt.show()
+
+        if latent_Z_trans.shape[1] == 2:
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.scatter(latent_Z_trans[:, 0][idx_hi], latent_Z_trans[:, 1][idx_hi], c='red', label='Mr. Hi')
+            ax1.scatter(latent_Z_trans[:, 0][idx_of], latent_Z_trans[:, 1][idx_of], c='blue', label='Officer')
+            ax1.annotate('Mr. Hi', latent_Z_trans[Mr_Hi, :])
+            ax1.annotate('Officer', latent_Z_trans[John_A, :])
+            ax1.legend()
+            ax1.set_title(f"Latent space after {iterations} iterations and AA on embeddings")
+            # Plotting learning curve
+            ax2.plot(losses)
+            ax2.set_title("Loss")
+            plt.show()
+
     
     #Link prediction
     if link_pred:
