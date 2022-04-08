@@ -149,39 +149,7 @@ if __name__ == "__main__":
         losses.append(loss.item())
         print('Loss at the',_,'iteration:',loss.item())
 
-    if AA:
-        import archetypes
-        aa = archetypes.AA(n_archetypes=2)
-        latent_Z_trans = aa.fit_transform(model.latent_Z.detach().numpy())
 
-        labels = list(club_labels.values())
-        idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
-        idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
-
-        if latent_Z_trans.shape[1] == 3:
-            fig = plt.figure()
-            ax = fig.add_subplot(projection='3d')
-            ax.scatter(latent_Z_trans[:, 0][idx_hi], latent_Z_trans[:, 1][idx_hi], latent_Z_trans[:, 2][idx_hi], c='red', label='Mr. Hi')
-            ax.scatter(latent_Z_trans[:, 0][idx_of], latent_Z_trans[:, 1][idx_of], latent_Z_trans[:, 2][idx_of], c='blue',
-                       label='Officer')
-            ax.text(latent_Z_trans[Mr_Hi, 0], latent_Z_trans[Mr_Hi, 1], latent_Z_trans[Mr_Hi, 2], 'Mr. Hi')
-            ax.text(latent_Z_trans[John_A, 0], latent_Z_trans[John_A, 1], latent_Z_trans[John_A, 2], 'Officer')
-            ax.set_title(f"Latent space after {iterations} iterations and AA on embeddings")
-            ax.legend()
-            plt.show()
-
-        if latent_Z_trans.shape[1] == 2:
-            fig, (ax1, ax2) = plt.subplots(1, 2)
-            ax1.scatter(latent_Z_trans[:, 0][idx_hi], latent_Z_trans[:, 1][idx_hi], c='red', label='Mr. Hi')
-            ax1.scatter(latent_Z_trans[:, 0][idx_of], latent_Z_trans[:, 1][idx_of], c='blue', label='Officer')
-            ax1.annotate('Mr. Hi', latent_Z_trans[Mr_Hi, :])
-            ax1.annotate('Officer', latent_Z_trans[John_A, :])
-            ax1.legend()
-            ax1.set_title(f"Latent space after {iterations} iterations and AA on embeddings")
-            # Plotting learning curve
-            ax2.plot(losses)
-            ax2.set_title("Loss")
-            plt.show()
 
     
     #Link prediction
@@ -225,22 +193,38 @@ if __name__ == "__main__":
         ax2.plot(losses)
         ax2.set_title("Loss")
         plt.show()
-        #Trying to add networkx drawing
-        #pos = {i: latent_Z[i, :] for i in range(A.shape[0])}
-        #nx.draw(ZKC_graph, with_labels=True, pos=pos)
-        #plt.show()
-'''
-    if latent_Z.shape[1] > 3:
-        embedding = umap.UMAP().fit_transform(latent_Z)
-        color_dict = {"Mr. Hi":"red", "Officer":"blue"}
-        plt.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            c=[color_dict[i] for i in labels ]
-            )
-        plt.annotate('Mr. Hi', embedding[Mr_Hi,:])
-        plt.annotate('Officer', embedding[John_A, :])
-        plt.gca().set_aspect('equal', 'datalim')
-        plt.title(f'UMAP projection of the latent space with dim: {latent_Z.shape[1]}')
+
+
+    if AA:
+        import archetypes
+        aa = archetypes.AA(n_archetypes=2)
+        latent_Z_trans = aa.fit_transform(model.latent_Z.detach().numpy())
+
+        labels = list(club_labels.values())
+        idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
+        idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
+
+        if latent_Z_trans.shape[1] == 3:
+            fig = plt.figure()
+            ax = fig.add_subplot(projection='3d')
+            ax.scatter(latent_Z_trans[:, 0][idx_hi], latent_Z_trans[:, 1][idx_hi], latent_Z_trans[:, 2][idx_hi], c='red', label='Mr. Hi')
+            ax.scatter(latent_Z_trans[:, 0][idx_of], latent_Z_trans[:, 1][idx_of], latent_Z_trans[:, 2][idx_of], c='blue',
+                       label='Officer')
+            ax.text(latent_Z_trans[Mr_Hi, 0], latent_Z_trans[Mr_Hi, 1], latent_Z_trans[Mr_Hi, 2], 'Mr. Hi')
+            ax.text(latent_Z_trans[John_A, 0], latent_Z_trans[John_A, 1], latent_Z_trans[John_A, 2], 'Officer')
+            ax.set_title(f"Latent space + AA after {iterations} iterations")
+            ax.legend()
+            plt.show()
+
+        if latent_Z_trans.shape[1] == 2:
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.scatter(latent_Z_trans[:, 0][idx_hi], latent_Z_trans[:, 1][idx_hi], c='red', label='Mr. Hi')
+            ax1.scatter(latent_Z_trans[:, 0][idx_of], latent_Z_trans[:, 1][idx_of], c='blue', label='Officer')
+            ax1.annotate('Mr. Hi', latent_Z_trans[Mr_Hi, :])
+            ax1.annotate('Officer', latent_Z_trans[John_A, :])
+            ax1.legend()
+            ax1.set_title(f"Latent space + AA after {iterations} iterations")
+            # Plotting learning curve
+            ax2.plot(losses)
+            ax2.set_title("Loss")
         plt.show()
-'''
