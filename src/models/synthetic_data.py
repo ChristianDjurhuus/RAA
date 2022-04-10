@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 import torch
 import torch.nn.functional as f
+from collections import defaultdict
+import pickle
 ####################
 ## Synthetic data ##
 ####################
@@ -35,6 +37,21 @@ def logit2prob(logit):
     probs = (odds) / (1+odds)
     return probs
 
+def convert(a):
+    '''
+    Utils function //
+    Convert adjacency matrix to edgelist
+    '''
+    edge_list = np.zeros((2, int(sum(sum(a)))))
+    for i in range(a.shape[0]):
+        for j in range(a.shape[1]):
+                       if a[i][j]== 1:
+                           edge_list[0, i] = i
+                           edge_list[1, j] = j
+    edge_list = edge_list[edge_list[0, :].argsort(), :]
+    return edge_list
+
+
 def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     ''' Generate adj matrix, Undirected case & without dimensionality reduction
             Z: samples drawn from dirichlet distribution
@@ -46,11 +63,18 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     A = f.softmax(A, dim=1)
     Z = torch.from_numpy(Z).float() #Already sums to one
     if rand:
-        beta = torch.randn(nsamples)
+        #Trying to replicate natural sparcity
+        r1=-10
+        r2= 2
+        a = 1
+        b = nsamples
+        beta = torch.FloatTensor(a, b).uniform_(r1, r2).reshape(-1)
+        #beta = torch.rand(nsamples)
         dim_matrix = torch.rand(d, k)
     else:
         beta = torch.zeros(nsamples)
-        dim_matrix = torch.eye((d, k))
+        #dim_matrix = torch.eye((d, k))
+        dim_matrix = torch.rand(d, k)
     
     beta_matrix = beta.unsqueeze(1) + beta
     M = torch.matmul(dim_matrix, torch.matmul(A, Z)).T # (N x K)
@@ -67,7 +91,7 @@ def main():
     d = 3
     k = 3
     alpha = 0.2
-    nsamples=36
+    nsamples=100
     synth_data, A, Z = synthetic_data(k, alpha, nsamples)
     adj_m = generate_network_bias(A, Z, k, d, nsamples, rand=True)
 
@@ -85,9 +109,17 @@ def main():
         fig.colorbar(sc, label="Density")
         ax.legend()
     plt.show()
+    plt.close()
 
     plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
     plt.show()
+
+    #edge_list = convert(adj_m)
+    #with open("synth_data", "wb") as fp: #https://stackoverflow.com/questions/27745500/how-to-save-a-list-to-a-file-and-read-it-as-a-list-type
+    #    pickle.dump(edge_list, fp)
+    return adj_m, z 
+
+    
 
 
 if __name__ == "__main__":
