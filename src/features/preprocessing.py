@@ -48,14 +48,3 @@ class Preprocessing():
 
     def labels(self):
         return NotImplementedError
-
-
-if __name__ == "__main__":
-
-    from numpy import loadtxt
-    data1 = loadtxt("data/raw/cora/sparse_i.txt", delimiter=",", unpack=False)
-    data2 = loadtxt("data/raw/cora/sparse_j.txt", delimiter=",", unpack=False)
-
-    prepos = Preprocessing(data1 = data1, data2 = data2, data_type = "Edge list")
-    edge_list = prepos.convert_to_egde_list()
-    print(edge_list)
