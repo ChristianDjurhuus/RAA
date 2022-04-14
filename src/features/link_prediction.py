@@ -1,40 +1,30 @@
-from numpy import zeros
 import torch
-import torch.nn as nn
-from scipy.io import mmread
 import matplotlib.pyplot as plt
-import torch.nn.functional as F
 from sklearn import metrics
-import networkx as nx 
-import seaborn as sns
 import numpy as np
 
-class Link_prediction:
-    def __init__(self, N: int, A, Z, G, beta) -> None:
-        self.N = N
-        self.A = A # torch parameter
-        self.Z = Z
-        self.G = G
-        self.beta = beta
+class Link_prediction():
+    def __init__(self, edge_list) -> None:
+        self.edge_list = edge_list
+        self.test, self.idx_i_test, self.idx_j_test = self.get_test_idx()
 
-    def link_prediction(self, X_test, idx_i_test, idx_j_test):
+    def link_prediction(self):
         with torch.no_grad():
-            Z = F.softmax(self.Z, dim=0)
-            G = F.sigmoid(self.G)
+            Z = torch.softmax(self.Z, dim=0)
+            G = torch.sigmoid(self.G)
             C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
 
-            M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test])).T #Size of test set e.g. K x N
-            M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, idx_j_test])).T
+            M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
+            M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
             z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
-            theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - z_pdist_test) # N x N
+            theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # N
 
             target = self.find_target()
 
-            fpr, tpr, threshold = metrics.roc_curve(target, rate.numpy())
-
+            fpr, tpr, threshold = metrics.roc_curve(target, rate.cpu().data.numpy())
 
             #Determining AUC score and precision and recall
             auc_score = metrics.roc_auc_score(target, rate.cpu().data.numpy())
@@ -55,11 +45,20 @@ class Link_prediction:
             
             return test, idx_i_test, idx_j_test
     
-    def find_target(self, edge_list):
+    def find_target(self):
         # Have to broadcast to list, since zip will create tuples of 0d tensors.
-        test, _, _ = self.get_test_idx()
-        test = test.tolist()
-        edge_list = edge_list.tolist()
+        test = self.test.tolist()
+        edge_list = self.edge_list.tolist()
         test = list(zip(test[0], test[1]))
         edge_list = list(zip(edge_list[0], edge_list[1]))
-        return [test[i] in edge_list for i in range(len(test))]
+        return [test[idx] in edge_list for idx in range(len(test))]
+
+    def plot_auc(self):
+        auc_score, fpr, tpr = self.link_prediction()
+        plt.plot(fpr, tpr, 'b', label = 'AUC = %0.2f' % auc_score)
+        plt.plot([0, 1], [0, 1],'r--', label='random')
+        plt.legend(loc = 'lower right')
+        plt.xlabel("False positive rate")
+        plt.ylabel("True positive rate")
+        plt.title("RAA model")
+        plt.show()
