@@ -30,7 +30,7 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
 
         self.missing_data = False
         self.sampling_weights = torch.ones(self.N, device = self.device)
-        self.sample_size = sample_size
+        self.sample_size = round(sample_size * self.N)
         self.sparse_i_idx = self.edge_list[0]
         self.sparse_i_idx = self.sparse_i_idx.to(self.device)
         self.sparse_j_idx = self.edge_list[1]

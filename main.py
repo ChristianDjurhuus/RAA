@@ -8,7 +8,7 @@ def main():
     seed = 4
     torch.random.manual_seed(seed)
     # Data and hyperparameters
-    data = 'data/raw/dolphin/dolphins.gml'
+    data = 'data/raw/karate/karate.gml'
     k = 10
     d = 10
 
@@ -19,12 +19,12 @@ def main():
     #                data_type = "gml", 
     #                sample_size=0.5) # Set sampling procentage size
 
-    model = LSM(latent_dim = 10,
-                    sample_size = 50,
+    model = LSM(latent_dim = 2,
+                    sample_size = 0.5,
                     data = data,
                     data_type = "gml")
     # Train
-    iterations = 1000
+    iterations = 2500
     model.train(iterations = iterations, LR = 0.01, print_loss = True)
     # Visualization
     model.plot_latent_and_loss(iterations)

@@ -69,5 +69,8 @@ class Link_prediction():
         plt.legend(loc = 'lower right')
         plt.xlabel("False positive rate")
         plt.ylabel("True positive rate")
-        plt.title("RAA model")
+        if self.__class__.__name__ == "DRRAA":
+            plt.title("RAA model")
+        if self.__class__.__name__ == "LSM":
+            plt.title("LSM model")
         plt.show()
