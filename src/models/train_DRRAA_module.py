@@ -14,11 +14,11 @@ from src.features.preprocessing import Preprocessing
 class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None):
         # TODO Skal finde en måde at loade data ind på. CHECK
-        # TODO Skal sørge for at alle classes for de parametre de skal bruge.
-        # TODO Skal ha indført en train funktion/class
-        # TODO SKal ha udvides visualiseringskoden
-        # TODO Skal sikre at alt kommer på det rigtige device
+        # TODO Skal sørge for at alle classes for de parametre de skal bruge. CHECK
+        # TODO Skal ha indført en train funktion/class. CHECK
+        # TODO SKal ha udvides visualiseringskoden. CHECK
         # TODO Skal ha lavet performancec check ()
+        # TODO Skal vi lave en sampling_weights med andet end 1 taller?
 
         super(DRRAA, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

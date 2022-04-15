@@ -6,28 +6,34 @@ import numpy as np
 class Link_prediction():
     def __init__(self, edge_list) -> None:
         self.edge_list = edge_list
-        self.test, self.idx_i_test, self.idx_j_test = self.get_test_idx()
+        self.target = [False]
+        while True not in self.target:
+            self.test, self.idx_i_test, self.idx_j_test = self.get_test_idx()
+            self.target = self.find_target()
+
 
     def link_prediction(self):
         with torch.no_grad():
-            Z = torch.softmax(self.Z, dim=0)
-            G = torch.sigmoid(self.G)
-            C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
+            if self.__class__.__name__ == "DRRAA":
+                Z = torch.softmax(self.Z, dim=0)
+                G = torch.sigmoid(self.G)
+                C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
 
-            M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
-            M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
-            z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
-            theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
+                M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
+                M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
+                z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+                theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
+            if self.__class__.__name__ == "LSM":
+                z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[-self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
+                theta = self.alpha - z_pdist_test #(Sample_size)
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # N
 
-            target = self.find_target()
-
-            fpr, tpr, threshold = metrics.roc_curve(target, rate.cpu().data.numpy())
+            fpr, tpr, threshold = metrics.roc_curve(self.target, rate.cpu().data.numpy())
 
             #Determining AUC score and precision and recall
-            auc_score = metrics.roc_auc_score(target, rate.cpu().data.numpy())
+            auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
 
             return auc_score, fpr, tpr
 
@@ -40,6 +46,7 @@ class Link_prediction():
                 idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(self.N))[
                     torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(self.N)), num_samples=1,
                                     replacement=True).item()].item()  # Temp solution to sample from upper corner
+                
 
             test = torch.stack((idx_i_test,idx_j_test))
             
@@ -52,6 +59,8 @@ class Link_prediction():
         test = list(zip(test[0], test[1]))
         edge_list = list(zip(edge_list[0], edge_list[1]))
         return [test[idx] in edge_list for idx in range(len(test))]
+
+
 
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()
