@@ -25,7 +25,7 @@ class Preprocessing():
             N = len(self.data)
             for i in range(len(self.data)):
                 for j in range(len(self.data[i])):
-                            if data1[i][j]== 1:
+                            if self.data[i][j]== 1:
                                 edge_list[i].append(j)
             return edge_list, N
 

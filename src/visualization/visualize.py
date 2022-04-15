@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import torch
 import numpy as np
-from fast_histogram import histogram2d
+import networkx as nx
+#from fast_histogram import histogram2d
 
 class Visualization():
     def __init__(self) -> None:
@@ -79,3 +80,8 @@ class Visualization():
         #plt.axis('off')
         plt.colorbar()
         plt.show()
+
+    def get_labels(self, attribute):
+        # This only works with a gml file
+        graph = nx.read_gml(self.data)
+        return list(nx.get_node_attributes(graph, attribute).values())
