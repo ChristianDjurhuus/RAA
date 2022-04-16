@@ -107,7 +107,7 @@ class Link_prediction():
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
         train_X, test_X, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42)
-        knn = KNeighborsClassifier(n_neighbors = 100).fit(train_X, train_y)
+        knn = KNeighborsClassifier(n_neighbors = 10).fit(train_X, train_y)
         return knn.score(test_X, test_y)
     
     def k_means(self, attribute, n_clusters):
