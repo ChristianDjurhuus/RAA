@@ -91,16 +91,17 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     adj_m = adj_m - torch.diag(torch.diagonal(adj_m))
     return adj_m
 
-def main(alpha):
+def main(alpha, k, N):
     d = 3
-    k = 3
-    nsamples = 100
+    k = k
+    nsamples = N
     synth_data, A, Z = synthetic_data(k, alpha, nsamples)
     adj_m = generate_network_bias(A, Z, k, d, nsamples, rand=False)
 
     #Calculating density
-    xy = np.vstack((synth_data[:,1].numpy(), synth_data[:,2].numpy()))
-    z = gaussian_kde(xy)(xy)
+    #xy = np.vstack((synth_data[:,1].numpy(), synth_data[:,2].numpy()))
+    #z = gaussian_kde(xy)(xy)
+    z=0
     #if synth_data.shape[1] == 3:
     #    fig = plt.figure()
     #    ax = fig.add_subplot(projection='3d')

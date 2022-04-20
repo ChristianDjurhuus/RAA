@@ -12,21 +12,15 @@ class Preprocessing():
 
     def convert_to_egde_list(self):
         if self.data_type == "Edge list":
+            N = 1000
+            return self.data, N
+
+        if self.data_type == "Adjacency matrix":
             edge_list = torch.zeros((len(self.data), 2))
             N = len(self.data)
             for idx in range(len(self.data)):
                 edge_list[0, idx] = self.data[idx]
                 edge_list[1, idx] = self.data_2[idx]
-            return edge_list, N
-
-        if self.data_type == "Adjacency matrix":
-            #TODO Test if this works
-            edge_list = defaultdict(list)
-            N = len(self.data)
-            for i in range(len(self.data)):
-                for j in range(len(self.data[i])):
-                            if self.data[i][j]== 1:
-                                edge_list[i].append(j)
             return edge_list, N
 
         if self.data_type == "gml":

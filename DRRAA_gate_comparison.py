@@ -14,17 +14,17 @@ import torch.nn.functional as f
 
 seed = 42
 torch.random.manual_seed(seed)
-k = 3
-d = 3
-N = 100
+d = 2
+N = 1000
 
 AUC_raa = []
 AUC_raa_ngating = []
 NMIs_ngating = []
 NMIs_raa = []
 ks = 12
-for k in range(2,ks):
-    adj_m, z, A, Z_true = main(alpha=0.2)  # z is cmap
+for k in range(2,ks+1):
+    torch.random.manual_seed(seed)
+    adj_m, z, A, Z_true = main(alpha=0.2,k=k,N=N)  # z is cmap
     G = nx.from_numpy_matrix(adj_m.numpy())
 
     temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -46,7 +46,7 @@ for k in range(2,ks):
                         data=edge_list)
 
     # Training models
-    iter = 5000
+    iter = 10000
     raa.train(iterations=iter)
     raa_ngating.train(iterations=iter)
 
@@ -68,22 +68,22 @@ for k in range(2,ks):
 
 mpl.rcParams['font.family'] = 'Times New Roman'
 fig, ax = plt.subplots(figsize=(10, 5), dpi=100)
-ax.plot(np.arange((2,ks)), AUC_raa, label='RAA')
-ax.plot(np.arange((2,ks)), AUC_raa_ngating, label='RAA w/o gating function')
+ax.plot(np.arange(2,ks+1), AUC_raa, label='RAA')
+ax.plot(np.arange(2,ks+1), AUC_raa_ngating, label='RAA w/o gating function')
 ax.set_xlabel("k")
 ax.set_ylabel("AUC score")
 ax.set_title("AUC score with varying number of archtypes")
 ax.legend()
-plt.savefig("AUCs.png")
+plt.savefig("AUCs_gate_vs_nogate.png")
 plt.show()
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi=100)
-ax.plot(np.arange((2,ks)), NMIs_raa, label='NMIs')
-ax.plot(np.arange((2,ks)), NMIs_ngating, label='NMIs no gating')
+ax.plot(np.arange(2,ks+1), NMIs_raa, label='NMIs')
+ax.plot(np.arange(2,ks+1), NMIs_ngating, label='NMIs no gating')
 ax.set_xlabel("k")
 ax.set_title("The NMI with varying number of archtypes")
 ax.set_ylabel("NMI score")
 ax.legend()
-plt.savefig("NMIs.png")
+plt.savefig("NMIs_gate_vs_nogate.png")
 plt.show()
 
