@@ -16,7 +16,7 @@ class LSM(nn.Module):
         self.input_size = input_size
         self.latent_dim = latent_dim
 
-        self.alpha = torch.nn.Parameter(torch.randn(1))
+        self.beta = torch.nn.Parameter(torch.randn(1))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim))
 
         self.missing_data = False
@@ -55,14 +55,14 @@ class LSM(nn.Module):
     def log_likelihood(self):
         sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
 
-        mat = torch.exp(-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
+        mat = torch.exp(self.beta-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
         #For the nodes without links
-        z_pdist1 = torch.exp(self.alpha) * (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0]).unsqueeze(0)),
+        z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0]).unsqueeze(0)),
                                                           (torch.mm((mat - torch.diag(torch.diagonal(mat))),
                                                                     torch.exp(torch.ones(sample_idx.shape[0])).unsqueeze(-1)))))
 
         #For the nodes with links
-        z_pdist2 = (-((((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1))) ** 0.5 + self.alpha).sum() #why plus alpha?
+        z_pdist2 = (-((((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1))) ** 0.5 + self.beta).sum() #why plus beta?
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
 
@@ -72,7 +72,7 @@ class LSM(nn.Module):
         with torch.no_grad():
 
             z_pdist_test = ((self.latent_Z[idx_i_test,:] - self.latent_Z[idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
-            theta = self.alpha - z_pdist_test #(Sample_size)
+            theta = self.beta - z_pdist_test #(Sample_size)
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # Sample_size

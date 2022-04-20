@@ -32,7 +32,7 @@ class Link_prediction():
                 theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
             if self.__class__.__name__ == "LSM":
                 z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[-self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
-                theta = self.alpha - z_pdist_test #(Sample_size)
+                theta = self.beta[self.idx_i_test]+self.beta[self.idx_j_test] - z_pdist_test #(Sample_size)
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # N

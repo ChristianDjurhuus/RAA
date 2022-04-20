@@ -73,7 +73,7 @@ class DRRAA(nn.Module):
                                                                     torch.exp(torch.ones(sample_idx.shape[0])).unsqueeze(-1)))))
         #For the nodes with links
         AZC = torch.mm(self.A, torch.mm(Z[:, sample_idx],C[sample_idx, :])) #This could perhaps be a computational issue
-        z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
+        z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - ((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1)) ** 0.5).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
