@@ -14,7 +14,7 @@ import numpy as np
 import json
 
 # Training iteration
-iterations = 10
+iterations = 10000
 d = 2 # Set dim for DRRAA
 LSM_losses = []
 n_archetypes = torch.arange(2,11)
@@ -35,9 +35,11 @@ AA_KNN_plot = {key: [] for key in data_names}
 AA_LR_plot = {key: [] for key in data_names}
 
 for i, data in enumerate(dataset):
+    print(data)
     # Train 10 LSM models and take the best
     LSM_AUC_score, LSM_KNN, LSM_LR = [], [], []
-    for seed in seeds: # Train model for each seed
+    for j, seed in enumerate(seeds): # Train model for each seed
+        print(j)
         torch.random.manual_seed(seed)
         model = LSM(latent_dim = d,
                 sample_size = 0.5,
@@ -65,6 +67,7 @@ for i, data in enumerate(dataset):
     torch.random.manual_seed(seeds[min_LSM_loss_idx]) # Train AA with same seed
 
     for idx in range(len(n_archetypes)):
+        print(f"arc_types: {idx}")
         model = DRRAA(data = data,
                         k=n_archetypes[idx],
                         d=d,
@@ -88,7 +91,7 @@ ax1.set_xticks(n_archetypes)
 ax1.set_xlim(torch.min(n_archetypes), torch.max(n_archetypes))
 ax1.set_title(f"DRRAA vs. LSM with {iterations} iterations")
 ax1.set_ylabel("AUC-score")
-ax1.legend()
+ax1.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 ax1.grid(alpha = 0.3)
 
 for data_name in data_names:
@@ -100,9 +103,10 @@ ax2.set_xticks(n_archetypes)
 ax2.set_title("Node classification")
 ax2.set_ylabel("Accuracy")
 ax2.set_xlim(torch.min(n_archetypes), torch.max(n_archetypes))
-ax2.legend()
+ax2.legend(bbox_to_anchor=(1.04,1), loc="upper left")
 ax2.grid(alpha = 0.3)
-fig.savefig(fname = "alldata" + "_" + str(iterations) + "_iterations.png", pad_inches = 0)
+fig.tight_layout()
+fig.savefig(fname = "alldata" + "_" + str(iterations) + "_iterations.png")
 plt.show()
 
 
@@ -114,7 +118,7 @@ for data_name in data_names:
     ax1.set_xlim(torch.min(n_archetypes), torch.max(n_archetypes))
     ax1.set_title(f"DRRAA vs. LSM with {iterations} iterations")
     ax1.set_ylabel("AUC-score")
-    ax1.legend()
+    ax1.legend(bbox_to_anchor=(1.04,1), loc="upper left")
     ax1.grid(alpha = 0.3)
 
     ax2.plot(n_archetypes, LSM_KNN_plot[data_name], label = data_name + " - LSM KNN")
@@ -125,9 +129,10 @@ for data_name in data_names:
     ax2.set_title("Node classification")
     ax2.set_ylabel("Accuracy")
     ax2.set_xlim(torch.min(n_archetypes), torch.max(n_archetypes))
-    ax2.legend()
+    ax2.legend(bbox_to_anchor=(1.04,1), loc="upper left")
     ax2.grid(alpha = 0.3)
-    fig.savefig(fname = data_name + "_" + str(iterations) + "_iterations.png", pad_inches = 0)
+    fig.tight_layout()
+    fig.savefig(fname = data_name + "_" + str(iterations) + "_iterations.png")
     plt.show()
 
 with open("comparison_data.json", "w") as w:
