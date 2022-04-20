@@ -9,7 +9,7 @@ import pickle
 ## Synthetic data ##
 ####################
 
-def synthetic_data(k, alpha, nsamples):
+def synthetic_data(k, alpha, nsamples, A=None):
     '''
     Randomly uniformly sample of data within a predefined polytope ((k-1)-simplex) using the Dirichlet distribution
         k: number of archetypes
@@ -18,12 +18,10 @@ def synthetic_data(k, alpha, nsamples):
     '''
 
     alpha = [alpha for i in range(k)]
-    #A = np.zeros((k, k))
-    A =  np.array([[12., 13.,  9.],
-       [18.,  6., 12.],
-       [14.,  7., 16.]])
-    #for i in range(k):
-    #    A[:,i] = np.random.randint(20, size=k).reshape(k,)
+    if not A:
+        A = np.zeros((k, k))
+        for i in range(k):
+            A[:,i] = np.random.randint(20, size=k).reshape(k,)
     Z = np.zeros((k, nsamples))
     for i in range(nsamples):
         Z[:,i] = np.random.dirichlet(alpha)
