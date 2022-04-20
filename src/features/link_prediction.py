@@ -20,7 +20,7 @@ class Link_prediction():
 
     def link_prediction(self):
         with torch.no_grad():
-            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre":
+            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
                 Z = torch.softmax(self.Z, dim=0)
                 G = torch.sigmoid(self.G)
                 C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
