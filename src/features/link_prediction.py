@@ -11,8 +11,7 @@ import networkx as nx
 
 
 class Link_prediction():
-    def __init__(self, edge_list) -> None:
-        self.edge_list = edge_list
+    def __init__(self):
         self.target = [False]
         self.labels = ""
         while True not in self.target and self.__class__.__name__ != "KAA":
@@ -36,7 +35,7 @@ class Link_prediction():
 
             if self.__class__.__name__ == "KAA":
                 X_shape = self.X.shape
-                num_samples = 15
+                num_samples = round(0.2 * self.N)
                 idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])), num_samples=num_samples,
                                             replacement=True)
                 idx_j_test = torch.tensor(torch.zeros(num_samples)).long()

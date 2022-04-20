@@ -17,10 +17,13 @@ class Preprocessing():
 
         if self.data_type == "Adjacency matrix":
             edge_list = torch.zeros((len(self.data), 2))
-            N = len(self.data)
-            for idx in range(len(self.data)):
-                edge_list[0, idx] = self.data[idx]
-                edge_list[1, idx] = self.data_2[idx]
+            G = nx.from_numpy_matrix(self.data.numpy())
+            N = len(G.nodes())
+            temp = [x for x in nx.generate_edgelist(G, data=False)]
+            edge_list = np.zeros((2, len(temp)))
+            for i in range(len(temp)): 
+                edge_list[0, i] = temp[i].split()[0]
+                edge_list[1, i] = temp[i].split()[1]
             return edge_list, N
 
         if self.data_type == "gml":
