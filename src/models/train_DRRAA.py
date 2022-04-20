@@ -9,6 +9,7 @@ import networkx as nx
 import seaborn as sns
 import numpy as np
 from torch_sparse import spspmm
+import pickle
 
 class DRRAA(nn.Module):
     def __init__(self, input_size, k, d, sampling_weights, sample_size, edge_list):
@@ -79,7 +80,7 @@ class DRRAA(nn.Module):
         return log_likelihood_sparse
     
 
-    def link_prediction(self, X_test, idx_i_test, idx_j_test):
+    def link_prediction(self, target, idx_i_test, idx_j_test):
         with torch.no_grad():
             Z = F.softmax(self.Z, dim=0)
             G = F.sigmoid(self.G)
@@ -108,22 +109,23 @@ if __name__ == "__main__":
 
     #A = mmread("data/raw/soc-karate.mtx")
     #A = A.todense()
-    G = nx.read_gml('data/raw/polblogs/polblogs.gml')
-    label_map = {x: i for i, x in enumerate(G.nodes)}
-    G = nx.relabel_nodes(G, label_map)
-    N = len(G.nodes())
+    Graph = nx.read_gml('data/raw/polblogs/polblogs.gml')
+    label_map = {x: i for i, x in enumerate(Graph.nodes)}
+    Graph = nx.relabel_nodes(Graph, label_map)
+    N = len(Graph.nodes())
+    #nx.get_node_attributes(G, "value") Metadata
     # Get the edge list
-    temp = [x for x in nx.generate_edgelist(G, data=False)]
+    temp = [x for x in nx.generate_edgelist(Graph, data=False)]
     edge_list = np.zeros((2, len(temp)))
     for i in range(len(temp)):
         edge_list[0, i] = temp[i].split()[0]
         edge_list[1, i] = temp[i].split()[1]
-
-    edge_list = torch.from_numpy(edge_list).long()
+    
+    edge_list = torch.FloatTensor(edge_list).long()
 
     #Setting number of archetypes and dimensions of latent space
-    k = 2
-    d = 2
+    k = 3
+    d = 3
 
     link_pred = True
 
@@ -156,7 +158,7 @@ if __name__ == "__main__":
                     sample_size=round(0.5*N),
                     edge_list=edge_list)
 
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=3e-2)
     
     losses = []
     iterations = 10000
@@ -191,6 +193,10 @@ if __name__ == "__main__":
     #idx_hi = [i for i, x in enumerate(labels) if x == "Mr. Hi"]
     #idx_of = [i for i, x in enumerate(labels) if x == "Officer"]
 
+    #labels = [value for (key, value) in dict(nx.get_node_attributes(Graph, "value")).items()]
+    #idx_left = [i for i, x in enumerate(labels) if x == 0] #Liberal
+    #idx_right = [i for i, x in enumerate(labels) if x == 1] #Conservative
+
     fig, (ax1, ax2) = plt.subplots(1, 2)
     sns.heatmap(Z.detach().numpy(), cmap="YlGnBu", cbar=False, ax=ax1)
     sns.heatmap(C.T.detach().numpy(), cmap="YlGnBu", cbar=False, ax=ax2)
@@ -201,12 +207,15 @@ if __name__ == "__main__":
         ax.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(),
                    embeddings[:, 2].detach().numpy(), c='red')
         ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(),
-                   archetypes[2, :].detach().numpy(), marker='^', c='black')
+                   archetypes[2, :].detach().numpy(), marker='^', c='blue')
+
+
         ax.set_title(f"Latent space after {iterations} iterations")
         ax.legend()
     else:
         fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(), c='red')
+        ax1.scatter(embeddings[:, 0][idx_left].detach().numpy(), embeddings[:, 1][idx_left].detach().numpy(), c='red')
+        ax1.scatter(embeddings[:, 0][idx_right].detach().numpy(), embeddings[:, 1][idx_right].detach().numpy(), c='blue')
         ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
         ax1.legend()
         ax1.set_title(f"Latent space after {iterations} iterations")
