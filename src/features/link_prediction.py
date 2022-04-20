@@ -21,7 +21,7 @@ class Link_prediction():
 
     def link_prediction(self):
         with torch.no_grad():
-            if self.__class__.__name__ == "DRRAA":
+            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre":
                 Z = torch.softmax(self.Z, dim=0)
                 G = torch.sigmoid(self.G)
                 C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
@@ -33,6 +33,7 @@ class Link_prediction():
             if self.__class__.__name__ == "LSM":
                 z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[-self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
                 theta = self.alpha - z_pdist_test #(Sample_size)
+            
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # N
