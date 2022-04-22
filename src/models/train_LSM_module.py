@@ -7,6 +7,7 @@ import numpy as np
 #import umap
 #import umap.plot
 from torch_sparse import spspmm
+import archetypes
 
 # import modules
 from src.visualization.visualize import Visualization
@@ -94,6 +95,88 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
             if print_loss:
                 print('Loss at the',_,'iteration:',loss.item())
 
+
+class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
+    def __init__(self, latent_dim,k, sample_size, data, data_type = "Edge list", data_2 = None):
+        super(LSMAA, self).__init__()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
+        self.edge_list, self.N = Preprocessing.convert_to_egde_list(self)
+        Link_prediction.__init__(self, edge_list = self.edge_list)
+        Visualization.__init__(self)
+
+        self.input_size = (self.N, self.N)
+        self.latent_dim = latent_dim
+        self.k = k
+
+        self.beta = torch.nn.Parameter(torch.randn((self.N), device = self.device))
+        self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
+
+        self.missing_data = False
+        self.sampling_weights = torch.ones(self.N, device = self.device)
+        self.sample_size = round(sample_size * self.N)
+        self.sparse_i_idx = self.edge_list[0]
+        self.sparse_i_idx = self.sparse_i_idx.to(self.device)
+        self.sparse_j_idx = self.edge_list[1]
+        self.sparse_j_idx = self.sparse_j_idx.to(self.device)
+        # list for training loss
+        self.losses = []
+
+
+    def sample_network(self):
+        # USE torch_sparse lib i.e. : from torch_sparse import spspmm
+
+        # sample for undirected network
+        sample_idx = torch.multinomial(self.sampling_weights, self.sample_size, replacement=False)
+        # translate sampled indices w.r.t. to the full matrix, it is just a diagonal matrix
+        indices_translator = torch.cat([sample_idx.unsqueeze(0), sample_idx.unsqueeze(0)], 0)
+        # adjacency matrix in edges format
+        edges = torch.cat([self.sparse_i_idx.unsqueeze(0), self.sparse_j_idx.unsqueeze(0)], 0) #.to(self.device)
+        # matrix multiplication B = Adjacency x Indices translator
+        # see spspmm function, it give a multiplication between two matrices
+        # indexC is the indices where we have non-zero values and valueC the actual values (in this case ones)
+        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1], device = self.device), indices_translator,
+                                torch.ones(indices_translator.shape[1], device = self.device), self.input_size[0], self.input_size[0],
+                                self.input_size[0], coalesced=True)
+        # second matrix multiplication C = Indices translator x B, indexC returns where we have edges inside the sample
+        indexC, valueC = spspmm(indices_translator, torch.ones(indices_translator.shape[1], device = self.device), indexC, valueC,
+                                self.input_size[0], self.input_size[0], self.input_size[0], coalesced=True)
+
+        # edge row position
+        sparse_i_sample = indexC[0, :]
+        # edge column position
+        sparse_j_sample = indexC[1, :]
+
+        return sample_idx, sparse_i_sample, sparse_j_sample
+
+    def log_likelihood(self):
+        sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
+        beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx]  # (N x N)
+        mat = torch.exp(beta-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
+        #For the nodes without links
+        z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
+                                                          (torch.mm((mat - torch.diag(torch.diagonal(mat))),
+                                                                    torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
+
+        #For the nodes with links
+        z_pdist2 = (self.beta[sparse_sample_i]+self.beta[sparse_sample_j]-(((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1) ** 0.5) ).sum()
+
+        log_likelihood_sparse = z_pdist2 - z_pdist1
+
+        return log_likelihood_sparse
+
+
+    def train(self, iterations, LR = 0.01, print_loss = True):
+        optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
+
+        for _ in range(iterations):
+            loss = - self.log_likelihood() / self.N
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            self.losses.append(loss.item())
+            if print_loss:
+                print('Loss at the',_,'iteration:',loss.item())
 if __name__ == "__main__": 
     seed = 1984
     torch.random.manual_seed(seed)

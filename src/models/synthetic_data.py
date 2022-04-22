@@ -9,7 +9,7 @@ import pickle
 ## Synthetic data ##
 ####################
 
-def synthetic_data(k, alpha, nsamples, A=None):
+def synthetic_data(k, alpha, nsamples, A=[]):
     '''
     Randomly uniformly sample of data within a predefined polytope ((k-1)-simplex) using the Dirichlet distribution
         k: number of archetypes
@@ -18,7 +18,7 @@ def synthetic_data(k, alpha, nsamples, A=None):
     '''
 
     alpha = [alpha for i in range(k)]
-    if not A:
+    if len(A) == False:
         A = np.zeros((k, k))
         for i in range(k):
             A[:,i] = np.random.randint(20, size=k).reshape(k,)
@@ -26,10 +26,11 @@ def synthetic_data(k, alpha, nsamples, A=None):
     for i in range(nsamples):
         Z[:,i] = np.random.dirichlet(alpha)
 
-    A = torch.from_numpy(A).float() #Should this sum to one?
+    if type(A) != torch.Tensor:
+        A = torch.from_numpy(A).float() #Should this sum to one?
     #A = f.softmax(A, dim=1)
     Z = torch.from_numpy(Z).float()
-    return np.matmul(A, Z).T, A, Z
+    return torch.matmul(A, Z).T, A, Z
 
 def logit2prob(logit):
     '''
@@ -91,33 +92,33 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     adj_m = adj_m - torch.diag(torch.diagonal(adj_m))
     return adj_m
 
-def main(alpha, k, N):
-    d = 3
+def main(alpha, k, N, A=[],d=3):
+    d = d
     k = k
     nsamples = N
-    synth_data, A, Z = synthetic_data(k, alpha, nsamples)
+    synth_data, A, Z = synthetic_data(k, alpha, nsamples, A=A)
     adj_m = generate_network_bias(A, Z, k, d, nsamples, rand=False)
 
     #Calculating density
-    #xy = np.vstack((synth_data[:,1].numpy(), synth_data[:,2].numpy()))
-    #z = gaussian_kde(xy)(xy)
+    '''xy = np.vstack((synth_data[:,1].numpy(), synth_data[:,2].numpy()))
+    z = gaussian_kde(xy)(xy)
+    #z=0
+    if synth_data.shape[1] == 3:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1],
+                    synth_data[:, 2], c=z, cmap='viridis')
+        ax.scatter(A[0, :], A[1, :],
+                    A[2, :], marker='^', c='black', label="Archetypes")
+        ax.set_title(f"True Latent Space")
+        fig.colorbar(sc, label="Density")
+        ax.legend()
+    plt.show()'''
+
+    '''plt.figure()
+    plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
+    plt.show()'''
     z=0
-    #if synth_data.shape[1] == 3:
-    #    fig = plt.figure()
-    #    ax = fig.add_subplot(projection='3d')
-    #    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1],
-    #                synth_data[:, 2], c=z, cmap='viridis')
-    #    ax.scatter(A[0, :], A[1, :],
-    #                A[2, :], marker='^', c='black', label="Archetypes")
-    #    ax.set_title(f"True Latent Space")
-    #    fig.colorbar(sc, label="Density")
-    #    ax.legend()
-    #plt.show()
-
-    #plt.figure()
-    #plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
-    #plt.show()
-
     #edge_list = convert(adj_m)
     #with open("synth_data", "wb") as fp: #https://stackoverflow.com/questions/27745500/how-to-save-a-list-to-a-file-and-read-it-as-a-list-type
     #    pickle.dump(edge_list, fp)
@@ -127,7 +128,7 @@ def main(alpha, k, N):
 
 
 if __name__ == "__main__":
-    main(alpha=.20)
+    main(alpha=0.2, k=3, N=100, A=A)
 
 
 

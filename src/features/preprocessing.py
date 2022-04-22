@@ -12,7 +12,7 @@ class Preprocessing():
 
     def convert_to_egde_list(self):
         if self.data_type == "Edge list":
-            N = 1000
+            N = 100
             return self.data, N
 
         if self.data_type == "Adjacency matrix":

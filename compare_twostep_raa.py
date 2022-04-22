@@ -1,5 +1,5 @@
 from src.models.train_DRRAA_module import DRRAA
-from src.models.train_DRRAA_ngating import DRRAA_ngating
+from src.models.train_LSM_module import LSMAA
 from src.models.synthetic_data import main
 from src.models.calcNMI import calcNMI
 
@@ -10,21 +10,26 @@ import networkx as nx
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import torch.nn.functional as f
+import archetypes
 
 seed = 38000
 torch.random.manual_seed(seed)
-d = 2
+d = 3
 N = 100
 
 AUC_raa = []
-AUC_raa_ngating = []
-NMIs_ngating = []
+AUC_lsm = []
+NMIs_lsm = []
 NMIs_raa = []
-ks = 6
-for k in range(2,ks+1):
+k = 3
+alphas = np.array([0.2,1,5])
+A = np.array([[12., 13., 9.],
+                  [18., 6., 12.],
+                  [14., 7., 16.]])
+for alpha in alphas:
     torch.random.manual_seed(seed)
     np.random.seed(seed)
-    adj_m, z, A, Z_true = main(alpha=0.2,k=k,N=N)  # z is cmap
+    adj_m, z, A, Z_true = main(alpha=alpha,k=k,N=N,A=A,d=d)  # z is cmap
     G = nx.from_numpy_matrix(adj_m.numpy())
 
     temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -40,50 +45,51 @@ for k in range(2,ks+1):
                 data=edge_list)
 
     # w/o random effects
-    raa_ngating = DRRAA_ngating(k=k,
-                        d=d,
-                        sample_size=1,  # Without gating function
-                        data=edge_list)
+    lsm = LSMAA(latent_dim=d,k=k, sample_size=1, data=edge_list)
 
     # Training models
     iter = 5000
     raa.train(iterations=iter)
-    raa_ngating.train(iterations=iter)
+    lsm.train(iterations=iter)
 
     raa_auc_score, _, _ = raa.link_prediction()
 
-    raa_ngating_score, _, _ = raa_ngating.link_prediction()
+    lsm_auc_score, _, _ = lsm.link_prediction()
 
 
     AUC_raa.append(raa_auc_score)
-    AUC_raa_ngating.append(raa_ngating_score)
+    AUC_lsm.append(lsm_auc_score)
 
 
     # Determining NMI
+    #raa
     Z_raa = f.softmax(raa.Z, dim=0)
     NMIs_raa.append(calcNMI(Z_raa, Z_true).item())
 
-    Z_ngating = f.softmax(raa_ngating.Z, dim=0)
-    NMIs_ngating.append(calcNMI(Z_ngating, Z_true).item())
+    #LSM with AA (two step)
+    aa = archetypes.AA(n_archetypes=k)
+    lsm_z = aa.fit_transform(lsm.latent_Z.detach().numpy())
+    latent_Z = torch.from_numpy(lsm_z).float()
+    Z_lsm = f.softmax(latent_Z, dim=0)
+    NMIs_lsm.append(calcNMI(Z_lsm.T, Z_true).item())
 
 mpl.rcParams['font.family'] = 'Times New Roman'
 fig, ax = plt.subplots(figsize=(10, 5), dpi=100)
-ax.plot(np.arange(2,ks+1), AUC_raa, label='RAA')
-ax.plot(np.arange(2,ks+1), AUC_raa_ngating, label='RAA w/o gating function')
-ax.set_xlabel("k")
+ax.plot(alphas, AUC_raa, label='RAA')
+ax.plot(alphas, AUC_lsm, label='LSM w/ AA (2-step)')
+ax.set_xlabel("alpha value")
 ax.set_ylabel("AUC score")
-ax.set_title("AUC score with varying number of archtypes")
+ax.set_title("AUC score with varying alpha values")
 ax.legend()
-plt.savefig("AUCs_gate_vs_nogate.png")
+plt.savefig("AUCs_twostep_raa.png")
 plt.show()
 
 fig, ax = plt.subplots(figsize=(10, 5), dpi=100)
-ax.plot(np.arange(2,ks+1), NMIs_raa, label='NMIs')
-ax.plot(np.arange(2,ks+1), NMIs_ngating, label='NMIs no gating')
+ax.plot(alphas, NMIs_raa, label='NMIs RAA')
+ax.plot(alphas, NMIs_lsm, label='NMIs LSM w/ AA (2-step)')
 ax.set_xlabel("k")
-ax.set_title("The NMI with varying number of archtypes")
+ax.set_title("The NMI with varying alpha values")
 ax.set_ylabel("NMI score")
 ax.legend()
-plt.savefig("NMIs_gate_vs_nogate.png")
+plt.savefig("NMIs_twostep_raa.png")
 plt.show()
-
