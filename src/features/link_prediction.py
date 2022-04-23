@@ -16,7 +16,9 @@ class Link_prediction():
         self.labels = ""
         while True not in self.target and self.__class__.__name__ != "KAA":
             self.test, self.idx_i_test, self.idx_j_test = self.get_test_idx()
-            self.target = self.find_target()
+            self.target, edge_list = self.find_target()
+        self.edge_list =  torch.tensor([list(t) for t in zip(*edge_list)])
+        
 
     def link_prediction(self):
         with torch.no_grad():
@@ -69,8 +71,26 @@ class Link_prediction():
 
             return auc_score, fpr, tpr
 
+    def ideal_prediction(self, A, Z, beta=None):
+        '''
+        A: Arcetypes
+        Z: sampled datapoints
+        '''
+        with torch.no_grad():
+            if beta == None:
+                beta = torch.ones(self.N)
+            M_i = torch.matmul(A, Z[:, self.idx_i_test]).T
+            M_j = torch.matmul(A, Z[:, self.idx_j_test]).T
+            z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5
+            theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)
+            rate = torch.exp(theta)
+            fpr, tpr, threshold = metrics.roc_curve(self.target, rate.cpu().data.numpy())
+            auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
+            return auc_score, fpr, tpr
+
+
     def get_test_idx(self):
-        num_samples = round(0.2 * self.N)
+        num_samples = round(0.2 * (0.5 *(self.N*(self.N-1))))
         idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
                                     replacement=True)
         idx_j_test = torch.tensor(np.zeros(num_samples)).long()
@@ -90,7 +110,15 @@ class Link_prediction():
         edge_list = self.edge_list.tolist()
         test = list(zip(test[0], test[1]))
         edge_list = list(zip(edge_list[0], edge_list[1]))
-        return [test[idx] in edge_list for idx in range(len(test))]
+        target = []
+        for i in range(len(test)):
+            if test[i] in edge_list:
+                target.append(True)
+                edge_list.remove(test[i])
+            else:
+                target.append(False)
+        #target = [test[idx] in edge_list for idx in range(len(test))] 
+        return target, edge_list
 
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()
