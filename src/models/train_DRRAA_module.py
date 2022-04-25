@@ -25,7 +25,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         #self.device = "cpu"
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
-        Link_prediction.__init__(self, edge_list = self.edge_list)
+        Link_prediction.__init__(self)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)

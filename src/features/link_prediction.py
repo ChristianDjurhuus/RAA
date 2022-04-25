@@ -13,13 +13,15 @@ import archetypes
 import time
 
 class Link_prediction():
-    def __init__(self, edge_list) -> None:
-        self.edge_list = edge_list
+    def __init__(self):
         self.target = [False]
         self.labels = ""
+
+
         while True not in self.target and self.__class__.__name__ != "KAA":
             self.target, self.idx_i_test, self.idx_j_test = self.get_test_idx()
             #self.target = self.find_target()
+
 
     def link_prediction(self):
         with torch.no_grad():
@@ -33,18 +35,19 @@ class Link_prediction():
                 z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
                 theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
             if self.__class__.__name__ == "LSM":
-                z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[-self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
+                z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
                 theta = self.beta[self.idx_i_test]+self.beta[self.idx_j_test] - z_pdist_test #(Sample_size)
             if self.__class__.__name__ == 'LSMAA':
                 # Do the AA on the lsm embeddings
                 aa = archetypes.AA(n_archetypes=self.k)
                 lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
                 latent_Z = torch.from_numpy(lsm_z).float()
-                z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[-self.idx_j_test,:] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-                theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (Sample_size)
+                z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
+                    -1) ** 0.5  # N x N
+                theta = self.beta - z_pdist_test  # (Sample_size)
             if self.__class__.__name__ == "KAA":
                 X_shape = self.X.shape
-                num_samples = 15
+                num_samples = round(0.2 * self.N)
                 idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])), num_samples=num_samples,
                                             replacement=True)
                 idx_j_test = torch.tensor(torch.zeros(num_samples)).long()
@@ -75,8 +78,26 @@ class Link_prediction():
 
             #Determining AUC score and precision and recall
             auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
-
+            print(self.__class__.__name__,':', auc_score)
             return auc_score, fpr, tpr
+
+    def ideal_prediction(self, A, Z, beta=None):
+        '''
+        A: Arcetypes
+        Z: sampled datapoints
+        '''
+        with torch.no_grad():
+            if beta == None:
+                beta = torch.ones(self.N)
+            M_i = torch.matmul(A, Z[:, self.idx_i_test]).T
+            M_j = torch.matmul(A, Z[:, self.idx_j_test]).T
+            z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5
+            theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)
+            rate = torch.exp(theta)
+            fpr, tpr, threshold = metrics.roc_curve(self.target, rate.cpu().data.numpy())
+            auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
+            return auc_score, fpr, tpr
+
 
     def get_test_idx(self):
         G = self.G.copy()
@@ -95,7 +116,7 @@ class Link_prediction():
                 if int(idx_j_test[i]) in target_nodes: #Loop through neighbors (super fast instead of self.edge_list)
                     G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
                     target[i] = 1
-            n_components_train = len(sorted(nx.connected_components(G), key=len))
+            n_components_train = nx.number_connected_components(G)
         temp = [x for x in nx.generate_edgelist(G, data=False)]
         edge_list = np.zeros((2, len(temp)))
         for idx in range(len(temp)):
@@ -104,15 +125,22 @@ class Link_prediction():
         self.edge_list = torch.from_numpy(edge_list).long()
         self.G = G
         return target, idx_i_test, idx_j_test
-    
+
     def find_target(self):
         # Have to broadcast to list, since zip will create tuples of 0d tensors.
         test = self.test.tolist()
         edge_list = self.edge_list.tolist()
         test = list(zip(test[0], test[1]))
         edge_list = list(zip(edge_list[0], edge_list[1]))
-        target = [test[idx] in edge_list for idx in range(len(test))]
-        return target
+        target = []
+        for i in range(len(test)):
+            if test[i] in edge_list:
+                target.append(True)
+                edge_list.remove(test[i])
+            else:
+                target.append(False)
+        #target = [test[idx] in edge_list for idx in range(len(test))] 
+        return target, edge_list
 
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()
