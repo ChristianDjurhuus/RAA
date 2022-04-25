@@ -10,14 +10,16 @@ from sklearn import preprocessing
 import networkx as nx
 import archetypes
 
+import time
+
 class Link_prediction():
     def __init__(self, edge_list) -> None:
         self.edge_list = edge_list
         self.target = [False]
         self.labels = ""
         while True not in self.target and self.__class__.__name__ != "KAA":
-            self.test, self.idx_i_test, self.idx_j_test = self.get_test_idx()
-            self.target = self.find_target()
+            self.target, self.idx_i_test, self.idx_j_test = self.get_test_idx()
+            #self.target = self.find_target()
 
     def link_prediction(self):
         with torch.no_grad():
@@ -77,16 +79,11 @@ class Link_prediction():
             return auc_score, fpr, tpr
 
     def get_test_idx(self):
-        edge_list = self.edge_list.tolist()
-        edge_list = list(zip(edge_list[0], edge_list[1]))
-
-        G = nx.Graph()
-        G.add_nodes_from(np.arange(self.N))
-        G.add_edges_from(edge_list)
-        n_components = len(sorted(nx.connected_components(G), key=len))
-        num_samples = round(0.2 * self.N)
-        n_components_train = n_components + 1
-        while n_components < n_components_train: #Make sure to never remove links that connect components
+        G = self.G.copy()
+        num_samples = round(0.2 * (0.5*(self.N*(self.N-1))))
+        n_components_train = 2
+        target = np.zeros(num_samples)
+        while 1 < n_components_train: #Make sure to never remove links so we get more than one component
             idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
                                         replacement=True)
             idx_j_test = torch.tensor(np.zeros(num_samples)).long()
@@ -94,23 +91,19 @@ class Link_prediction():
                 idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(self.N))[
                     torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(self.N)), num_samples=1,
                                     replacement=True).item()].item() # Temp solution to sample from upper corner
-            rm_links = list(zip(idx_i_test.tolist(),idx_j_test.tolist()))
-            G_train = G.copy()
-            edge_list_train = list(G_train.edges())
-            for st in rm_links:
-                if st in edge_list_train:
-                    edge_list_train.remove(st)
-            G_train = nx.Graph()
-            G_train.add_nodes_from(np.arange(self.N))
-            G_train.add_edges_from(edge_list_train)
-            n_components_train = len(sorted(nx.connected_components(G_train), key=len))
-
-
-            
-
-        test = torch.stack((idx_i_test,idx_j_test))
-        
-        return test, idx_i_test, idx_j_test
+                target_nodes = G.neighbors(int(idx_i_test[i]))
+                if int(idx_j_test[i]) in target_nodes: #Loop through neighbors (super fast instead of self.edge_list)
+                    G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
+                    target[i] = 1
+            n_components_train = len(sorted(nx.connected_components(G), key=len))
+        temp = [x for x in nx.generate_edgelist(G, data=False)]
+        edge_list = np.zeros((2, len(temp)))
+        for idx in range(len(temp)):
+            edge_list[0, idx] = temp[idx].split()[0]
+            edge_list[1, idx] = temp[idx].split()[1]
+        self.edge_list = torch.from_numpy(edge_list).long()
+        self.G = G
+        return target, idx_i_test, idx_j_test
     
     def find_target(self):
         # Have to broadcast to list, since zip will create tuples of 0d tensors.
@@ -118,7 +111,8 @@ class Link_prediction():
         edge_list = self.edge_list.tolist()
         test = list(zip(test[0], test[1]))
         edge_list = list(zip(edge_list[0], edge_list[1]))
-        return [test[idx] in edge_list for idx in range(len(test))]
+        target = [test[idx] in edge_list for idx in range(len(test))]
+        return target
 
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()

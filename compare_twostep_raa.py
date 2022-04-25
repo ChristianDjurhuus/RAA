@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as f
 import archetypes
 
-seed = 38000
+seed = 42
 torch.random.manual_seed(seed)
 d = 3
 N = 100
@@ -42,10 +42,11 @@ for alpha in alphas:
     raa = DRRAA(k=k,
                 d=d,
                 sample_size=1,
-                data=edge_list)
+                data=adj_m.numpy(),
+                data_type="Adjacency matrix")
 
     # w/o random effects
-    lsm = LSMAA(latent_dim=d,k=k, sample_size=1, data=edge_list)
+    lsm = LSMAA(latent_dim=d,k=k, sample_size=1, data=adj_m.numpy(), data_type="Adjacency matrix")
 
     # Training models
     iter = 5000
@@ -87,7 +88,7 @@ plt.show()
 fig, ax = plt.subplots(figsize=(10, 5), dpi=100)
 ax.plot(alphas, NMIs_raa, label='NMIs RAA')
 ax.plot(alphas, NMIs_lsm, label='NMIs LSM w/ AA (2-step)')
-ax.set_xlabel("k")
+ax.set_xlabel("alpha value")
 ax.set_title("The NMI with varying alpha values")
 ax.set_ylabel("NMI score")
 ax.legend()
