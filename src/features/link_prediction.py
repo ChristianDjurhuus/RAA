@@ -14,7 +14,7 @@ class Link_prediction():
     def __init__(self):
         self.target = [False]
         self.labels = ""
-        while True not in self.target and self.__class__.__name__ != "KAA":
+        if self.__class__.__name__ != "KAA":
             self.test, self.idx_i_test, self.idx_j_test = self.get_test_idx()
             self.target, edge_list = self.find_target()
         self.edge_list =  torch.tensor([list(t) for t in zip(*edge_list)])
@@ -103,7 +103,7 @@ class Link_prediction():
         G.add_nodes_from(np.arange(self.N))
         G.add_edges_from(edge_list)
         n_components = len(sorted(nx.connected_components(G), key=len))
-        num_samples = round(0.2 * self.N)
+        num_samples = round(0.2 * 0.5* self.N *(self.N- 1 ))
         n_components_train = n_components + 1
         while n_components < n_components_train: #Make sure to never remove links that connect components
             idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
