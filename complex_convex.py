@@ -15,7 +15,7 @@ seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
-iter = 15000
+iter = 5000
 avgNMIs = {}
 avgAUCs = {}
 avgIAUCs = {}
@@ -23,7 +23,7 @@ conf_NMIs = {}
 conf_AUCs = {}
 conf_IAUCs = {}
 #Get synthetic data and convert to edge list
-adj_m, z, A, Z_true = main(alpha=.05, k=8, dim=2, nsamples=400) #z is cmap
+adj_m, z, A, Z_true = main(alpha=.2, k=3, dim=2, nsamples=100) #z is cmap
 G = nx.from_numpy_matrix(adj_m.numpy())
 temp = [x for x in nx.generate_edgelist(G, data=False)]
 edge_list = np.zeros((2, len(temp)))
@@ -44,7 +44,7 @@ for k in tqdm(num_arc):
                     sample_size=0.5, #Without random sampling
                     data=edge_list)
 
-        model.train(iterations=iter, LR=0.01, print_loss=False)
+        model.train(iterations=iter, LR=0.01)
         auc_score, fpr, tpr = model.link_prediction()
         if k==8:
             ideal_score, _, _ = model.ideal_prediction(A, Z_true)
@@ -55,7 +55,7 @@ for k in tqdm(num_arc):
         C = (Z.T * G) / (Z.T * G).sum(0)
 
         u, sigma, v = torch.svd(model.A) # Decomposition of A.
-        r = torch.matmul(torch.diag(sigma), v.T) #TODO is this legal?
+        r = torch.matmul(torch.diag(sigma), v.T)
         embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
         archetypes = torch.matmul(r, torch.matmul(Z, C))
 
@@ -110,7 +110,7 @@ ax.set_xlabel("k (Number of archetypes)")
 ax.set_title(r"The NMI with different number of archetypes")
 ax.set_ylabel("score")
 ax.legend()
-plt.savefig("complex_NMI.pdf")
+#plt.savefig("complex_NMI.pdf")
 plt.show()
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=100)
@@ -128,7 +128,7 @@ ax.set_xlabel("k (Number of archetypes)")
 ax.set_title("The AUC with different number of archetypes")
 ax.set_ylabel("score")
 ax.legend()
-plt.savefig("complex_AUC.pdf")
+#plt.savefig("complex_AUC.pdf")
 plt.show()
 
 
