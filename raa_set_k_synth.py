@@ -21,7 +21,7 @@ AUC_raa = []
 AUC_raa_ngating = []
 NMIs_ngating = []
 NMIs_raa = []
-ks = 12
+ks = 3 #should be 2 or more
 true_k = 3
 
 np.random.seed(seed)
@@ -40,6 +40,7 @@ for k in range(2,ks+1):
                 d=d,
                 sample_size=1,
                 data=edge_list)
+                #data_type='Adjacency matrix')
 
     # Training models
     iter = 5000

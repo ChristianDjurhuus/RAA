@@ -13,8 +13,12 @@ class Preprocessing():
 
     def convert_to_egde_list(self):
         if self.data_type == "Edge list":
-            N = len(self.data)
-            return self.data, N
+            #Convert list to zipped list
+            edgelist = self.data.tolist()
+            edgelist = list(zip(edgelist[0],edgelist[1]))
+            G = nx.from_edgelist(edgelist)
+            N = torch.max(self.data).item()+1
+            return self.data, N, G
 
         if self.data_type == "Adjacency matrix":
             G = nx.from_numpy_matrix(self.data)
@@ -41,7 +45,18 @@ class Preprocessing():
                 edge_list = torch.tensor(edge_list).long().cuda()
             else:
                 edge_list = torch.tensor(edge_list).long()
-            return edge_list, N
+            return edge_list, N, G
+
+        #if you have a nx graph:
+        if self.data_type == 'Networkx':
+            G = self.data
+            N = len(G.nodes())
+            temp = [x for x in nx.generate_edgelist(G, data=False)]
+            edge_list = np.zeros((2, len(temp)))
+            for idx in range(len(temp)):
+                edge_list[0, idx] = temp[idx].split()[0]
+                edge_list[1, idx] = temp[idx].split()[1]
+            return edge_list, N, G
 
 
     def labels(self):
