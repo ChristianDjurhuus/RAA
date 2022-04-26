@@ -19,8 +19,9 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
         super(LSM, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
-        self.edge_list, self.N = Preprocessing.convert_to_egde_list(self)
+        self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
         Link_prediction.__init__(self)
+
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
@@ -100,17 +101,19 @@ class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, latent_dim,k, sample_size, data, data_type = "Edge list", data_2 = None):
         super(LSMAA, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
-        self.edge_list, self.N = Preprocessing.convert_to_egde_list(self)
-        Link_prediction.__init__(self, edge_list = self.edge_list)
+        Preprocessing.__init__(self, data=data, data_type=data_type, device=self.device, data_2=data_2)
+        self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
+        Link_prediction.__init__(self)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
         self.latent_dim = latent_dim
+        self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
         self.k = k
 
-        self.beta = torch.nn.Parameter(torch.randn((self.N), device = self.device))
-        self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
+        self.beta = torch.nn.Parameter(torch.randn(1, device = self.device))
+
+
 
         self.missing_data = False
         self.sampling_weights = torch.ones(self.N, device = self.device)
@@ -151,15 +154,14 @@ class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
 
     def log_likelihood(self):
         sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
-        beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx]  # (N x N)
-        mat = torch.exp(beta-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
+        mat = torch.exp(self.beta-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
         #For the nodes without links
         z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
                                                           (torch.mm((mat - torch.diag(torch.diagonal(mat))),
                                                                     torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
 
         #For the nodes with links
-        z_pdist2 = (self.beta[sparse_sample_i]+self.beta[sparse_sample_j]-(((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1) ** 0.5) ).sum()
+        z_pdist2 = (self.beta-(((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1) ** 0.5) ).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
 
