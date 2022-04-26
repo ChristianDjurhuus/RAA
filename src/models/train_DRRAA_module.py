@@ -25,7 +25,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         #self.device = "cpu"
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
         self.edge_list, self.N = Preprocessing.convert_to_egde_list(self)
-        Link_prediction.__init__(self, edge_list = self.edge_list)
+        Link_prediction.__init__(self)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
@@ -35,7 +35,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0], device = self.device))
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k, device = self.device))
-        #self.u, self.sigma, self.vt = torch.svd(torch.nn.Parameter(torch.randn(self.d, self.k)))
+        #self.u, self.sigma, self.vt = torch.svd(self.A))
         #self.A = torch.nn.Parameter(self.sigma * self.vt)
         self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0], device = self.device))
         #self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
