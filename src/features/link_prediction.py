@@ -10,17 +10,18 @@ from sklearn import preprocessing
 import networkx as nx
 import archetypes
 
-import time
 
 class Link_prediction():
     def __init__(self):
+        '''
+        Link prediction class. Takes self.data as edgelist format and self.G as Networkx graph format and returns
+        roc_curve_AUC on a test set. Test data is 50% of the possible relationships between nodes in the graph.
+        '''
         self.target = [False]
         self.labels = ""
+        while (True not in self.target or False not in self.target) and self.__class__.__name__ != "KAA":
+            self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
 
-
-        while True not in self.target and self.__class__.__name__ != "KAA":
-            self.target, self.idx_i_test, self.idx_j_test = self.get_test_idx()
-            #self.target = self.find_target()
 
 
     def link_prediction(self):
@@ -65,10 +66,9 @@ class Link_prediction():
 
                 M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
                 M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
-                #M_i = torch.matmul(torch.matmul(self.X, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
-                #M_j = torch.matmul(torch.matmul(self.X, C), S[:, idx_j_test]).T
+
                 z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
-                #z_pdist_test = torch.from_numpy(pairwise_distances(M_i, M_j, "jaccard"))
+
                 theta = z_pdist_test # N x N
 
             #Get the rate -> exp(log_odds) 
@@ -99,9 +99,9 @@ class Link_prediction():
             return auc_score, fpr, tpr
 
 
-    def get_test_idx(self):
+    def get_test_and_train(self):
         G = self.G.copy()
-        num_samples = round(0.2 * (0.5*(self.N*(self.N-1))))
+        num_samples = round(0.5 * (0.5*(self.N*(self.N-1))))
         n_components_train = 2
         target = np.zeros(num_samples)
         while 1 < n_components_train: #Make sure to never remove links so we get more than one component
@@ -125,22 +125,6 @@ class Link_prediction():
         self.edge_list = torch.from_numpy(edge_list).long()
         self.G = G
         return target, idx_i_test, idx_j_test
-
-    def find_target(self):
-        # Have to broadcast to list, since zip will create tuples of 0d tensors.
-        test = self.test.tolist()
-        edge_list = self.edge_list.tolist()
-        test = list(zip(test[0], test[1]))
-        edge_list = list(zip(edge_list[0], edge_list[1]))
-        target = []
-        for i in range(len(test)):
-            if test[i] in edge_list:
-                target.append(True)
-                edge_list.remove(test[i])
-            else:
-                target.append(False)
-        #target = [test[idx] in edge_list for idx in range(len(test))] 
-        return target, edge_list
 
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()
