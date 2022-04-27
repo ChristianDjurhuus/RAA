@@ -3,6 +3,11 @@ import matplotlib.colors as colors
 import torch
 import numpy as np
 import networkx as nx
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from matplotlib.colors import ListedColormap
 #from fast_histogram import histogram2d
 
 class Visualization():
@@ -85,3 +90,93 @@ class Visualization():
         # This only works with a gml file
         graph = nx.read_gml(self.data)
         return list(nx.get_node_attributes(graph, attribute).values())
+
+    def decision_boundary_linear(self, attribute):
+        """
+        Now only works for binary classes
+        https://scipython.com/blog/plotting-the-decision-boundary-of-a-logistic-regression-model/
+        """
+        if self.labels == "":
+            self.labels = self.get_labels(attribute)
+        # TODO Talk about how we get the split
+        X, _ = self.get_embeddings()
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(self.labels) # label encoding
+        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42)
+        reg = LogisticRegression(solver = "saga", max_iter = 1000, random_state = 42).fit(train_X, train_y)
+        reg.fit(train_X, train_y)
+
+        # Retrieve the model parameters.
+        b = reg.intercept_[0]
+        w1, w2 = reg.coef_.T
+        # Calculate the intercept and gradient of the decision boundary.
+        c = -b/w2
+        m = -w1/w2
+
+        # Plot the data and the classification with the decision boundary.
+        xmin, xmax = X[:, 0].min(), X[:, 0].max()
+        ymin, ymax = X[:, 1].min(), X[:, 1].max()
+        print((xmin, xmax))
+        print((ymin, ymax))
+        xd = np.array([xmin, xmax])
+        yd = m * xd + c
+        fig, ax = plt.subplots()
+        ax.set_xlim(left = xmin, right = xmax)
+        ax.set_ylim(bottom = ymin, top = ymax)
+        ax.plot(xd, yd, 'k', lw = 1, ls = '--')
+        ax.fill_between(xd, yd, ymin, color='tab:blue', alpha=0.2)
+        ax.fill_between(xd, yd, ymax, color='tab:orange', alpha=0.2)
+        ax.scatter(*X[y == 0].T, s = 8, alpha=0.5)
+        ax.scatter(*X[y == 1].T, s = 8, alpha=0.5)
+        ax.set_ylabel(r'$x_2$', fontsize = "medium")
+        ax.set_xlabel(r'$x_1$', fontsize = "medium")
+        ax.set_title("Decision Boundary", fontsize = "large")
+        plt.show()
+        #plt.plot(xd, yd, 'k', lw = 1, ls = '--')
+        #plt.fill_between(xd, yd, ymin, color='tab:blue', alpha=0.2)
+        #plt.fill_between(xd, yd, ymax, color='tab:orange', alpha=0.2)
+
+        #plt.scatter(*X[y == 0].T, s = 8, alpha=0.5)
+        #plt.scatter(*X[y == 1].T, s = 8, alpha=0.5)
+        #plt.xlim(xmin, xmax)
+        #plt.ylim(ymin, ymax)
+        #plt.ylabel(r'$x_2$')
+        #plt.xlabel(r'$x_1$')
+        #plt.show()
+        return reg.score(test_X, test_y)
+
+    def decision_boundary_knn(self, attribute, n_neighbors = 10): #TODO test if this works
+        # https://stackoverflow.com/questions/45075638/graph-k-nn-decision-boundaries-in-matplotlib
+        if self.labels == "":
+            self.labels = self.get_labels(attribute)
+        # TODO Talk about how we get the split
+        X, _ = self.get_embeddings()
+        le = preprocessing.LabelEncoder()
+        y = le.fit_transform(self.labels) # label encoding
+        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42)
+        knn = KNeighborsClassifier(n_neighbors = n_neighbors).fit(train_X, train_y)
+
+        h = .02  # step size in the mesh
+        # Create color maps
+        cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
+        cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+
+        # Plot the decision boundary. For that, we will assign a color to each
+        # point in the mesh [x_min, x_max]x[y_min, y_max].
+        x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+        y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+        Z = knn.predict(np.c_[xx.ravel(), yy.ravel()])
+
+        # Put the result into a color plot
+        Z = Z.reshape(xx.shape)
+        ax, fig = plt.subplots(dpi = 100)
+        ax.pcolormesh(xx, yy, Z, cmap=cmap_light)
+
+        # Plot also the training points
+        ax.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
+        ax.set_xlim(xx.min(), xx.max())
+        ax.set_ylim(yy.min(), yy.max())
+        ax.set_title("Desicion boundary - KNN")
+        plt.show()
+
