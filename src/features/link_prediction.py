@@ -1,4 +1,3 @@
-from ast import Try
 import torch
 import matplotlib.pyplot as plt
 from sklearn import metrics
@@ -10,10 +9,6 @@ from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
 import networkx as nx
 import archetypes
-import random
-import time
-from tqdm import tqdm
-
 
 class Link_prediction():
     def __init__(self):
@@ -82,7 +77,6 @@ class Link_prediction():
 
             #Determining AUC score and precision and recall
             auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
-            print(self.__class__.__name__,':', auc_score)
             return auc_score, fpr, tpr
 
     def ideal_prediction(self, A, Z, beta=None):
@@ -113,7 +107,7 @@ class Link_prediction():
 
     def get_test_and_train(self):
         cc_problem = False
-        num_samples = round(0.3 * (0.5*(self.N*(self.N-1))))
+        num_samples = round(self.test_size * (0.5*(self.N*(self.N-1))))
         target = []
         G = self.G.copy()
         idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
