@@ -22,7 +22,7 @@ class Link_prediction():
         self.target = [False]
         self.labels = ""
         while (True not in self.target or False not in self.target) and self.__class__.__name__ != "KAA":
-            self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train() 
+            self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
 
 
 
@@ -100,83 +100,42 @@ class Link_prediction():
             auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
             return auc_score, fpr, tpr
 
-
-    def get_test_and_train_temp(self):
-        #TODO: Might have issues with sampling from lower and upper triangle
-        #Positive links (50% of edges) and negativeg links (Equal # as positive)
-        #The heavy memory users:
-        n_components_train = 2
-        while 1 < n_components_train:
-            t0 = time.time()
-            G_altered = self.G.copy()
-            edges = list(self.G.edges)
-            nonedges = list(nx.non_edges(self.G))
-            chosen_edge = random.sample(edges, round(0.5 * len(edges))) 
-            N_chosen_edge = len(chosen_edge)
-            chosen_nonedge = random.sample(nonedges, N_chosen_edge)
-            target = [True] * N_chosen_edge + [False] * N_chosen_edge
-            #Need to be optimized
-            idx_i_test = torch.tensor(np.zeros(N_chosen_edge*2)).long()
-            idx_j_test = torch.tensor(np.zeros(N_chosen_edge*2)).long()
-
-            #Ensure that we sample upper triangle
-            for i in range(N_chosen_edge):
-                #positive links
-                edge = chosen_edge[i]
-                if edge[0] < edge[1]:
-                    idx_i_test[i] = edge[0]
-                    idx_j_test[i] = edge[1]
-                else:
-                    idx_i_test[i] = edge[1]
-                    idx_j_test[i] = edge[0]
-                #negative links
-                nonedge = chosen_nonedge[i]
-                if nonedge[0] < nonedge[1]:
-                    idx_i_test[i + N_chosen_edge] = nonedge[0]
-                    idx_j_test[i + N_chosen_edge] = nonedge[1]
-                else:
-                    idx_i_test[i + N_chosen_edge] = nonedge[1]
-                    idx_j_test[i + N_chosen_edge] = nonedge[0]
-            t1 = time.time()
-            print(f'The time it took to generate train test split: {t1-t0}')
-
-            G_altered.remove_edges_from(chosen_edge)
-            n_components_train = nx.number_connected_components(G_altered)
-
-        temp = [x for x in nx.generate_edgelist(G_altered, data=False)]
-        edge_list = np.zeros((2, len(temp)))
-        for idx in range(len(temp)):
-            edge_list[0, idx] = temp[idx].split()[0]
-            edge_list[1, idx] = temp[idx].split()[1]
-        self.edge_list = torch.from_numpy(edge_list).long()
-        self.G = G_altered
-
-        return target, idx_i_test, idx_j_test
-
-
+    def th_delete(self, tensor, indices):
+        '''
+        deletes elements from a tensor by index. Borrowed from Alexey_Stolpovskiy at:
+        https://discuss.pytorch.org/t/how-to-remove-an-element-from-a-1-d-tensor-by-index/23109/14
+        '''
+        mask = torch.ones(tensor.numel(), dtype=torch.bool)
+        mask[indices] = False
+        return tensor[mask]
 
     def get_test_and_train(self):
-        num_samples = round(0.5 * (0.5*(self.N*(self.N-1))))
-        g_num_edge_init = self.G.number_of_edges()
-        n_components_train = 2
-        target = np.zeros(num_samples)
-        while 1 < n_components_train: #Make sure to never remove links so we get more than one component
-            G = self.G.copy()
-            t0 = time.time()
-            idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
-                                        replacement=True)
-            idx_j_test = torch.tensor(np.zeros(num_samples)).long()
-            for i in range(len(idx_i_test)):
-                idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(self.N))[
-                    torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(self.N)), num_samples=1,
-                                    replacement=True).item()].item() # Temp solution to sample from upper corner
-                target_nodes = G.neighbors(int(idx_i_test[i]))
-                if int(idx_j_test[i]) in target_nodes: #Loop through neighbors (super fast instead of self.edge_list)
-                    G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
-                    target[i] = 1
-            t1 = time.time()
-            print(f'The time it took to generate train test split: {t1-t0}')
-            n_components_train = nx.number_connected_components(G)
+        cc_problem = False
+        num_samples = round(0.3 * (0.5*(self.N*(self.N-1))))
+        target = []
+        G = self.G.copy()
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
+                                    replacement=True)
+        idx_j_test = torch.tensor(np.zeros(num_samples)).long()
+        delete_idx = []
+        for i in range(len(idx_i_test)):
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(self.N))[
+                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(self.N)), num_samples=1,
+                                replacement=True).item()].item() # Temp solution to sample from upper corner
+            target_nodes = G.neighbors(int(idx_i_test[i]))
+            if int(idx_j_test[i]) in target_nodes: #Loop through neighbors (super fast instead of self.edge_list)
+                G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
+                if nx.number_connected_components(G) == 1:
+                    target.append(1)
+                else:
+                    G.add_edge(int(idx_i_test[i]), int(idx_j_test[i])) #skip the draw if the link splits network into two components
+                    cc_problem = True
+                    delete_idx.append(i)
+                    continue
+            else:
+                target.append(0)
+        idx_i_test = self.th_delete(idx_i_test, delete_idx)
+        idx_j_test = self.th_delete(idx_j_test, delete_idx)
         temp = [x for x in nx.generate_edgelist(G, data=False)]
         edge_list = np.zeros((2, len(temp)))
         for idx in range(len(temp)):
@@ -184,8 +143,13 @@ class Link_prediction():
             edge_list[1, idx] = temp[idx].split()[1]
         self.edge_list = torch.from_numpy(edge_list).long()
         self.G = G
-        print(f'The proportion of removed edges: {self.G.number_of_edges() / g_num_edge_init}')
-        print(f'The propotion of negative examples: {sum(np.where(target==0))/len(target)}')
+        if cc_problem:
+            print(f'''There was a problem when removing links from the train set which could have resulted in splitting
+            the network into multiple components. We decided not to remove these links, however, the test set will be
+            smaller and sparser than anticipated. It now contains {int(sum(target))} edges and a sparsity of 
+            {round(np.mean(target)*100,2)}% as opposed to the train set's {self.G.number_of_edges()} edges and sparsity of
+            {round((self.G.number_of_edges() / ((self.G.number_of_nodes()**2))*0.5)*100,2)}% - this is after removing
+            edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
         return target, idx_i_test, idx_j_test
 
     def plot_auc(self):
