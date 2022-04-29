@@ -20,6 +20,9 @@ class Link_prediction():
         self.labels = ""
         while (True not in self.target or False not in self.target) and self.__class__.__name__ != "KAA":
             self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
+        while (True not in self.target or False not in self.target) and self.__class__.__name__ == "KAA":
+            self.target, self.idx_i_test, self.idx_j_test, self.X_test = self.get_test_and_train()
+
 
 
 
@@ -33,7 +36,7 @@ class Link_prediction():
                 M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
                 M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
                 z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
-                theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
+                theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) #(test_size)
             if self.__class__.__name__ == "LSM":
                 z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
                 theta = self.beta[self.idx_i_test]+self.beta[self.idx_j_test] - z_pdist_test #(Sample_size)
@@ -44,33 +47,20 @@ class Link_prediction():
                 latent_Z = torch.from_numpy(lsm_z).float()
                 z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                     -1) ** 0.5  # N x N
-                theta = self.beta - z_pdist_test  # (Sample_size)
+                theta = self.beta - z_pdist_test  # (test_size)
             if self.__class__.__name__ == "KAA":
-                X_shape = self.X.shape
-                num_samples = round(0.2 * self.N)
-                idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])), num_samples=num_samples,
-                                            replacement=True)
-                idx_j_test = torch.tensor(torch.zeros(num_samples)).long()
-                for i in range(len(idx_i_test)):
-                    idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(X_shape[1]))[
-                        torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(X_shape[1])), num_samples=1,
-                                        replacement=True).item()].item()  # Temp solution to sample from upper corner
-                X_test = self.X.detach().clone()
-                X_test[:] = 0
-                X_test[idx_i_test, idx_j_test] = self.X[idx_i_test, idx_j_test]
-                self.X[idx_i_test, idx_j_test] = 0    
-
                 S = torch.softmax(self.S, dim=0)
                 C = torch.softmax(self.C, dim=0)
 
-                M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
-                M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
+                CtKC = C.T @ self.kernel(self.X_test,
+                                         type=self.type) @ C
+                z_dist = torch.zeros(len(self.idx_i_test))
+                for i in range(len(self.idx_i_test)):
+                    z_dist[i] = (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_i_test[i]]
+                              + S[:, self.idx_j_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]]
+                              - 2*(S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]]))+1e-06
+                theta = -z_dist  #(test_size)
 
-                z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
-
-                theta = z_pdist_test # N x N
-
-            #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # N
 
             fpr, tpr, threshold = metrics.roc_curve(self.target, rate.cpu().data.numpy())
@@ -139,6 +129,7 @@ class Link_prediction():
             edge_list[1, idx] = temp[idx].split()[1]
         self.edge_list = torch.from_numpy(edge_list).long()
         self.G = G
+        self.data = torch.from_numpy(nx.adjacency_matrix(self.G).todense()).float()
         if cc_problem:
             print(f'''There was a problem when removing links from the train set which could have resulted in splitting
             the network into multiple components. We decided not to remove these links, however, the test set will be
@@ -146,7 +137,35 @@ class Link_prediction():
             {round(np.mean(target)*100,2)}% as opposed to the train set's {self.G.number_of_edges()} edges and sparsity of
             {round((self.G.number_of_edges() / ((self.G.number_of_nodes()**2))*0.5)*100,2)}% - this is after removing
             edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
+        if self.__class__.__name__ == 'KAA':
+            X_test = self.data.clone()
+            X_test[:] = 0
+            X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
+            self.data[idx_i_test, idx_j_test] = 0
+            return target, idx_i_test, idx_j_test, X_test
         return target, idx_i_test, idx_j_test
+
+    def KAA_test_train(self):
+        '''We can re-write the last line by (s_i - s_j)^t C^tX^tXC (s_i - s_j)
+         so if we construct a tensor storing S=(s_i - s_j) for all (i,j) pairs,
+         it can be written by (CS)^tX^tX(CS) and the term, X^tX, can be replaced by any kernel function K(x, x).'''
+        X_shape = self.data.shape
+        num_samples = round(self.test_size * self.N)
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])),
+                                       num_samples=num_samples,
+                                       replacement=True)
+        idx_j_test = torch.tensor(torch.zeros(num_samples)).long()
+        for i in range(len(idx_i_test)):
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(X_shape[1]))[
+                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(X_shape[1])),
+                                  num_samples=1,
+                                  replacement=True).item()].item()  # Temp solution to sample from upper corner
+        X_test = self.data.detach().clone()
+        X_test[:] = 0
+        X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
+        self.data[idx_i_test, idx_j_test] = 0
+        target = X_test[idx_i_test, idx_j_test]  # N
+        return target, idx_i_test, idx_j_test, X_test
 
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()

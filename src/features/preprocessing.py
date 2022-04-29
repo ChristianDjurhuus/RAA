@@ -83,6 +83,8 @@ class Preprocessing():
                 edge_list[0, idx] = temp[idx].split()[0]
                 edge_list[1, idx] = temp[idx].split()[1]
             return edge_list, N, G
+        if self.data_type == 'kaa':
+            return None, None, None
 
 
     def labels(self):
