@@ -1,3 +1,4 @@
+from ast import Try
 import torch
 import matplotlib.pyplot as plt
 from sklearn import metrics
@@ -11,6 +12,7 @@ import networkx as nx
 import archetypes
 import random
 import time
+from tqdm import tqdm
 
 
 class Link_prediction():
@@ -105,63 +107,79 @@ class Link_prediction():
         #TODO: Might have issues with sampling from lower and upper triangle
         #Positive links (50% of edges) and negativeg links (Equal # as positive)
         #The heavy memory users:
-        n_components_train = 2
-        while 1 < n_components_train:
-            t0 = time.time()
-            G_altered = self.G.copy()
-            edges = list(self.G.edges)
-            nonedges = list(nx.non_edges(self.G))
-            chosen_edge = random.sample(edges, round(0.5 * len(edges))) 
-            N_chosen_edge = len(chosen_edge)
-            chosen_nonedge = random.sample(nonedges, N_chosen_edge)
-            target = [True] * N_chosen_edge + [False] * N_chosen_edge
-            #Need to be optimized
-            idx_i_test = torch.tensor(np.zeros(N_chosen_edge*2)).long()
-            idx_j_test = torch.tensor(np.zeros(N_chosen_edge*2)).long()
+        t0 = time.time()
+        G_altered = self.G.copy()
+        edges = list(self.G.edges)
+        nonedges = list(nx.non_edges(self.G))
+        chosen_edge = random.sample(edges, round(0.3 * len(edges))) 
+        N_chosen_edge = len(chosen_edge)
+        chosen_nonedge = random.sample(nonedges, N_chosen_edge)
+        target = [True] * N_chosen_edge + [False] * N_chosen_edge
+        #Need to be optimized
+        idx_i_test = torch.tensor(np.zeros(N_chosen_edge*2)).long()
+        idx_j_test = torch.tensor(np.zeros(N_chosen_edge*2)).long()
 
-            #Ensure that we sample upper triangle
-            for i in range(N_chosen_edge):
-                #positive links
-                edge = chosen_edge[i]
-                if edge[0] < edge[1]:
-                    idx_i_test[i] = edge[0]
-                    idx_j_test[i] = edge[1]
+        #Ensure that we sample upper triangle
+        for i in range(N_chosen_edge):
+            #positive links
+            edge = chosen_edge[i]
+            if edge[0] < edge[1]:
+                idx_i_test[i] = edge[0]
+                idx_j_test[i] = edge[1]
+            else:
+                idx_i_test[i] = edge[1]
+                idx_j_test[i] = edge[0]
+            #negative links
+            nonedge = chosen_nonedge[i]
+            if nonedge[0] < nonedge[1]:
+                idx_i_test[i + N_chosen_edge] = nonedge[0]
+                idx_j_test[i + N_chosen_edge] = nonedge[1]
+            else:
+                idx_i_test[i + N_chosen_edge] = nonedge[1]
+                idx_j_test[i + N_chosen_edge] = nonedge[0]
+
+        G_altered.remove_edges_from(chosen_edge)
+        n_components_train = nx.number_connected_components(G_altered)
+        if n_components_train > 1:
+            Gcc = sorted(nx.connected_components(G_altered), key=len, reverse=True)
+            G_altered = G_altered.subgraph(Gcc[0]).copy()
+            self.N = G_altered.number_of_nodes()
+            #Removing the links from the test set, which is not in Gcc
+            i = 0
+            num = N_chosen_edge*2
+            while i < (num):
+                print(f'Iteration:{i}/{N_chosen_edge*2}')
+                try:
+                    if idx_i_test[i] not in list(G_altered.nodes()) or idx_j_test[i] not in list(G_altered.nodes()):
+                        idx_i_test = torch.cat((idx_i_test[:i], idx_i_test[i+1:]))
+                        idx_j_test = torch.cat((idx_j_test[:i], idx_j_test[i+1:]))
+                        del target[i]
+                except:
+                    break
                 else:
-                    idx_i_test[i] = edge[1]
-                    idx_j_test[i] = edge[0]
-                #negative links
-                nonedge = chosen_nonedge[i]
-                if nonedge[0] < nonedge[1]:
-                    idx_i_test[i + N_chosen_edge] = nonedge[0]
-                    idx_j_test[i + N_chosen_edge] = nonedge[1]
-                else:
-                    idx_i_test[i + N_chosen_edge] = nonedge[1]
-                    idx_j_test[i + N_chosen_edge] = nonedge[0]
-            t1 = time.time()
-            print(f'The time it took to generate train test split: {t1-t0}')
-
-            G_altered.remove_edges_from(chosen_edge)
-            n_components_train = nx.number_connected_components(G_altered)
-
+                    i+=1
         temp = [x for x in nx.generate_edgelist(G_altered, data=False)]
         edge_list = np.zeros((2, len(temp)))
         for idx in range(len(temp)):
             edge_list[0, idx] = temp[idx].split()[0]
             edge_list[1, idx] = temp[idx].split()[1]
         self.edge_list = torch.from_numpy(edge_list).long()
-        self.G = G_altered
+        self.G = G_altered.copy()
 
-        return target, idx_i_test, idx_j_test
+        t1 = time.time()
+        print(f'The time it took to generate train test split: {t1-t0}')
+
+        return np.array(target), idx_i_test, idx_j_test
 
 
 
     def get_test_and_train(self):
+        G = self.G.copy()
         num_samples = round(0.5 * (0.5*(self.N*(self.N-1))))
-        g_num_edge_init = self.G.number_of_edges()
         n_components_train = 2
         target = np.zeros(num_samples)
         while 1 < n_components_train: #Make sure to never remove links so we get more than one component
-            G = self.G.copy()
+            print('trying again')
             t0 = time.time()
             idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
                                         replacement=True)
@@ -176,7 +194,7 @@ class Link_prediction():
                     target[i] = 1
             t1 = time.time()
             print(f'The time it took to generate train test split: {t1-t0}')
-            n_components_train = nx.number_connected_components(G)
+            n_components_train = nx.number_connected_components(G) - nx.number_connected_components(G)
         temp = [x for x in nx.generate_edgelist(G, data=False)]
         edge_list = np.zeros((2, len(temp)))
         for idx in range(len(temp)):
@@ -184,8 +202,6 @@ class Link_prediction():
             edge_list[1, idx] = temp[idx].split()[1]
         self.edge_list = torch.from_numpy(edge_list).long()
         self.G = G
-        print(f'The proportion of removed edges: {self.G.number_of_edges() / g_num_edge_init}')
-        print(f'The propotion of negative examples: {sum(np.where(target==0))/len(target)}')
         return target, idx_i_test, idx_j_test
 
     def plot_auc(self):

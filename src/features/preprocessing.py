@@ -35,6 +35,12 @@ class Preprocessing():
             G = nx.read_gml(self.data)
             label_map = {x: i for i, x in enumerate(G.nodes)}
             G = nx.relabel_nodes(G, label_map)
+            G = G.to_undirected()
+            if  nx.number_connected_components(G) > 1:
+                Gcc = sorted(nx.connected_components(G), key=len, reverse=True)
+                G = G.subgraph(Gcc[0])
+                label_map = {x: i for i, x in enumerate(G.nodes)}
+                G = nx.relabel_nodes(G, label_map)
             N = len(G.nodes())
             temp = [x for x in nx.generate_edgelist(G, data=False)]
             edge_list = np.zeros((2, len(temp)))
