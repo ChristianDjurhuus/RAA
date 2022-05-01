@@ -68,7 +68,7 @@ class Link_prediction():
 
                 if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
                     Z = torch.softmax(self.Z, dim=0)
-                    G = torch.sigmoid(self.G)
+                    G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
 
                     M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T #Size of test set e.g. K x N
@@ -230,7 +230,7 @@ class Link_prediction():
     def get_embeddings(self):
         if self.__class__.__name__ == "DRRAA":
             Z = torch.softmax(self.Z, dim=0)
-            G = torch.sigmoid(self.G)
+            G = torch.sigmoid(self.Gate)
             C = (Z.T * G) / (Z.T * G).sum(0)
 
             embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
