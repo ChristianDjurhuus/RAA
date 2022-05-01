@@ -7,6 +7,7 @@ from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
+from sklearn.metrics import f1_score
 import networkx as nx
 import archetypes
 
@@ -19,57 +20,81 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        while (True not in self.target or False not in self.target) and self.__class__.__name__ != "KAA":
+        if self.__class__.__name__ != "KAA" and self.data_type != "sparse":
             self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
-
-
 
     def link_prediction(self):
         with torch.no_grad():
-            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
-                Z = torch.softmax(self.Z, dim=0)
-                G = torch.sigmoid(self.G)
-                C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
+            if self.data_type != "sparse":
+                if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.G)
+                    C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
 
-                M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
-                M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
-                z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
-                theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
-            if self.__class__.__name__ == "LSM":
-                z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
-                theta = self.beta[self.idx_i_test]+self.beta[self.idx_j_test] - z_pdist_test #(Sample_size)
-            if self.__class__.__name__ == 'LSMAA':
-                # Do the AA on the lsm embeddings
-                aa = archetypes.AA(n_archetypes=self.k)
-                lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
-                latent_Z = torch.from_numpy(lsm_z).float()
-                z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
-                    -1) ** 0.5  # N x N
-                theta = self.beta - z_pdist_test  # (Sample_size)
-            if self.__class__.__name__ == "KAA":
-                X_shape = self.X.shape
-                num_samples = round(0.2 * self.N)
-                idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])), num_samples=num_samples,
-                                            replacement=True)
-                idx_j_test = torch.tensor(torch.zeros(num_samples)).long()
-                for i in range(len(idx_i_test)):
-                    idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(X_shape[1]))[
-                        torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(X_shape[1])), num_samples=1,
-                                        replacement=True).item()].item()  # Temp solution to sample from upper corner
-                X_test = self.X.detach().clone()
-                X_test[:] = 0
-                X_test[idx_i_test, idx_j_test] = self.X[idx_i_test, idx_j_test]
-                self.X[idx_i_test, idx_j_test] = 0    
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+                    theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test) # N x N
+                if self.__class__.__name__ == "LSM":
+                    z_pdist_test = ((self.latent_Z[self.idx_i_test,:] - self.latent_Z[self.idx_j_test,:] + 1e-06)**2).sum(-1)**0.5 # N x N
+                    theta = self.beta[self.idx_i_test]+self.beta[self.idx_j_test] - z_pdist_test #(Sample_size)
+                if self.__class__.__name__ == 'LSMAA':
+                    # Do the AA on the lsm embeddings
+                    aa = archetypes.AA(n_archetypes=self.k)
+                    lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = torch.from_numpy(lsm_z).float()
+                    z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
+                        -1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (Sample_size)
+                if self.__class__.__name__ == "KAA":
+                    X_shape = self.X.shape
+                    num_samples = round(0.2 * self.N)
+                    idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])), num_samples=num_samples,
+                                                replacement=True)
+                    idx_j_test = torch.tensor(torch.zeros(num_samples)).long()
+                    for i in range(len(idx_i_test)):
+                        idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(X_shape[1]))[
+                            torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(X_shape[1])), num_samples=1,
+                                            replacement=True).item()].item()  # Temp solution to sample from upper corner
+                    X_test = self.X.detach().clone()
+                    X_test[:] = 0
+                    X_test[idx_i_test, idx_j_test] = self.X[idx_i_test, idx_j_test]
+                    self.X[idx_i_test, idx_j_test] = 0    
 
-                S = torch.softmax(self.S, dim=0)
-                C = torch.softmax(self.C, dim=0)
+                    S = torch.softmax(self.S, dim=0)
+                    C = torch.softmax(self.C, dim=0)
 
-                M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
-                M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
+                    M_i = torch.matmul(torch.matmul(S, C), S[:, idx_i_test]).T #Size of test set e.g. K x N
+                    M_j = torch.matmul(torch.matmul(S, C), S[:, idx_j_test]).T
 
-                z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+                    z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
 
-                theta = z_pdist_test # N x N
+                    theta = z_pdist_test # N x N
+            
+            if self.data_type == "sparse":
+                # Create targets
+                self.target = torch.cat((torch.zeros(self.non_sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
+
+                if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.G)
+                    C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T #Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06)**2).sum(-1)**0.5 # N x N 
+                    theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test) # N x N
+                if self.__class__.__name__ == "LSM":
+                    z_pdist_test = ((self.latent_Z[self.removed_i,:] - self.latent_Z[self.removed_j,:] + 1e-06)**2).sum(-1)**0.5 # N x N
+                    theta = self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test #(Sample_size)
+                if self.__class__.__name__ == 'LSMAA':
+                    # Do the AA on the lsm embeddings
+                    aa = archetypes.AA(n_archetypes=self.k)
+                    lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = torch.from_numpy(lsm_z).float()
+                    z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
+                        -1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (Sample_size)
 
             #Get the rate -> exp(log_odds) 
             rate = torch.exp(theta) # N
@@ -79,6 +104,7 @@ class Link_prediction():
             #Determining AUC score and precision and recall
             auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
             print(self.__class__.__name__,':', auc_score)
+            #print(self.__class__.__name__,':', f1_score(self.target, rate.cpu().data.numpy()))
             return auc_score, fpr, tpr
 
     def ideal_prediction(self, A, Z, beta=None):
@@ -101,22 +127,30 @@ class Link_prediction():
 
     def get_test_and_train(self):
         G = self.G.copy()
-        num_samples = round(0.5 * (0.5*(self.N*(self.N-1))))
-        n_components_train = 2
+        g_num_edge_initial = G.number_of_edges()
+        num_samples = round(0.2 * (0.5 * (self.N * (self.N - 1))))
         target = np.zeros(num_samples)
-        while 1 < n_components_train: #Make sure to never remove links so we get more than one component
-            idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
-                                        replacement=True)
-            idx_j_test = torch.tensor(np.zeros(num_samples)).long()
-            for i in range(len(idx_i_test)):
-                idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(self.N))[
-                    torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(self.N)), num_samples=1,
-                                    replacement=True).item()].item() # Temp solution to sample from upper corner
-                target_nodes = G.neighbors(int(idx_i_test[i]))
-                if int(idx_j_test[i]) in target_nodes: #Loop through neighbors (super fast instead of self.edge_list)
-                    G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
-                    target[i] = 1
-            n_components_train = nx.number_connected_components(G)
+
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(self.N)), num_samples=num_samples,
+                                    replacement=True)
+        idx_j_test = torch.tensor(np.zeros(num_samples)).long()
+        for i in range(len(idx_i_test)):
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(self.N))[
+                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(self.N)), num_samples=1,
+                                replacement=True).item()].item() # Temp solution to sample from upper corner
+
+            #if G.has_edge(int(idx_i_test[i]), int(idx_j_test[i])):
+            #    target[i] = 1
+            target_nodes = G.neighbors(int(idx_i_test[i]))
+            if int(idx_j_test[i]) in target_nodes: #Loop through neighbors (super fast instead of self.edge_list)
+                G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
+                target[i] = 1
+                if nx.number_connected_components(G) > 1:
+                    G.add_edge(int(idx_i_test[i]), int(idx_j_test[i]))
+
+        print(f"removed edges{g_num_edge_initial - G.number_of_edges()}")
+        print(f"removed edges prop{G.number_of_edges() / g_num_edge_initial}")
+        print(target)
         temp = [x for x in nx.generate_edgelist(G, data=False)]
         edge_list = np.zeros((2, len(temp)))
         for idx in range(len(temp)):
@@ -158,7 +192,7 @@ class Link_prediction():
         if self.__class__.__name__ == "LSM":
             return self.latent_Z.cpu().detach().numpy(), 0
 
-    def KNeighborsClassifier(self, attribute):
+    def KNeighborsClassifier(self, attribute, n_neighbors = 10):
         if self.labels == "":
             self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
@@ -166,7 +200,7 @@ class Link_prediction():
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
         train_X, test_X, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42)
-        knn = KNeighborsClassifier(n_neighbors = 10).fit(train_X, train_y)
+        knn = KNeighborsClassifier(n_neighbors = n_neighbors).fit(train_X, train_y)
         return knn.score(test_X, test_y)
     
     def k_means(self, attribute, n_clusters):
