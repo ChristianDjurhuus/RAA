@@ -108,29 +108,29 @@ def main(alpha, k, dim, nsamples):
     #Calculating density
     xy = np.vstack((synth_data[:,0].numpy(), synth_data[:,1].numpy()))
     z = gaussian_kde(xy)(xy)
-    mpl.rcParams['font.family'] = 'Times New Roman'
-    if dim == 3:
-        fig = plt.figure(dpi=100)
-        ax = fig.add_subplot(projection='3d')
-        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap='viridis')
-        ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
-        ax.set_title(f"True Latent Space (alpha={alpha})")
-        fig.colorbar(sc, label="Density")
-    else:
-        fig, ax = plt.subplots(dpi=100)
-        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap='viridis')
-        ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
-        ax.set_title(f"True Latent Space (alpha={alpha})")
-        fig.colorbar(sc, label="Density")
-    ax.legend()
-    plt.show()
+    #mpl.rcParams['font.family'] = 'Times New Roman'
+    #if dim == 3:
+    #    fig = plt.figure(dpi=100)
+    #    ax = fig.add_subplot(projection='3d')
+    #    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap='viridis')
+    #    ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
+    #    ax.set_title(f"True Latent Space (alpha={alpha})")
+    #    fig.colorbar(sc, label="Density")
+    #else:
+    #    fig, ax = plt.subplots(dpi=100)
+    #    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap='viridis')
+    #    ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
+    #    ax.set_title(f"True Latent Space (alpha={alpha})")
+    #    fig.colorbar(sc, label="Density")
+    #ax.legend()
+    #plt.show()
     #plt.savefig(f'true_latent_space_{alpha}.png')
 
-    plt.figure(dpi=100)
-    plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
+    #plt.figure(dpi=100)
+    #plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
     #plt.title(f"Adjacency matrix ({alpha})")
     #plt.savefig(f'synt_adjacency_{alpha}.png')
-    plt.show()
+    #plt.show()
 
     return adj_m, z, A, Z
 

@@ -42,7 +42,8 @@ for k in tqdm(num_arc):
         model = DRRAA(k=k,
                     d=d, 
                     sample_size=0.5, #Without random sampling
-                    data=edge_list)
+                    data=edge_list,
+                    link_pred=True)
 
         model.train(iterations=iter, LR=0.01)
         auc_score, fpr, tpr = model.link_prediction()

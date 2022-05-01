@@ -12,13 +12,15 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class DRRAA_ngating(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None):
+    def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3 ):
         super(DRRAA_ngating, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         #self.device = "cpu"
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
-        self.edge_list, self.N = Preprocessing.convert_to_egde_list(self)
-        Link_prediction.__init__(self, edge_list = self.edge_list)
+        self.edge_list, self.N, self.G= Preprocessing.convert_to_egde_list(self)
+        if link_pred:
+            self.test_size = test_size
+            Link_prediction.__init__(self)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
@@ -32,7 +34,7 @@ class DRRAA_ngating(nn.Module, Preprocessing, Link_prediction, Visualization):
         #self.A = torch.nn.Parameter(self.sigma * self.vt)
         self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0], device = self.device))
         #self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
-        self.G = torch.nn.Parameter(torch.randn(self.input_size[0], self.k, device = self.device))
+        self.Gate = torch.nn.Parameter(torch.randn(self.input_size[0], self.k, device = self.device))
 
         self.missing_data = False
         self.sampling_weights = torch.ones(self.N, device = self.device)
@@ -74,7 +76,7 @@ class DRRAA_ngating(nn.Module, Preprocessing, Link_prediction, Visualization):
     def log_likelihood(self):
         sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
         Z = F.softmax(self.Z, dim=0) #(K x N)
-        G = F.softmax(self.G,dim=0)
+        G = F.softmax(self.Gate,dim=0)
 
         #For the nodes without links
         beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
