@@ -110,14 +110,14 @@ for idx, alpha in enumerate(alpha_values):
     #print(f'The NMI between z and z_hat is {calcNMI(Z, Z_true)}')
 
 mpl.rcParams['font.family'] = 'Times New Roman'
-fig, ax = plt.subplots(figsize=(10,5), dpi=200)
+fig, ax = plt.subplots(figsize=(10,5), dpi=100)
 ax.plot(alpha_values, NMIs, label='NMIs')
 ax.set_xlabel("alpha value")
 ax.set_title("The NMI with different alpha values")
 ax.set_ylabel("score")
 ax.legend()
 plt.show()
-fig, ax = plt.subplots(figsize=(10,5), dpi=200)
+fig, ax = plt.subplots(figsize=(10,5), dpi=100)
 ax.plot(alpha_values, AUCs, label='AUCs')
 ax.set_xlabel("alpha value")
 ax.set_title("The AUC with different alpha values")

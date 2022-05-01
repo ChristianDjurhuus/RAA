@@ -8,17 +8,19 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, latent_dim, sample_size, data, data_type = "Edge list", data_2 = None):
+    def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3):
         super(LSM, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
-        Link_prediction.__init__(self)
+        if link_pred:
+            self.test_size = test_size
+            Link_prediction.__init__(self)
 
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
-        self.latent_dim = latent_dim
+        self.latent_dim = d
 
         self.beta = torch.nn.Parameter(torch.randn((self.N), device = self.device))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
@@ -91,16 +93,18 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
 
 
 class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, latent_dim,k, sample_size, data, data_type = "Edge list", data_2 = None):
+    def __init__(self, d,k, sample_size, data, data_type = "Edge list", data_2 = None, link_pred = False, test_size=0.3):
         super(LSMAA, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         Preprocessing.__init__(self, data=data, data_type=data_type, device=self.device, data_2=data_2)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
-        Link_prediction.__init__(self)
+        if link_pred:
+            self.test_size = test_size
+            Link_prediction.__init__(self)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
-        self.latent_dim = latent_dim
+        self.latent_dim = d
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
         self.k = k
 

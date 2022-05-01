@@ -17,7 +17,7 @@ class Preprocessing():
             edgelist = self.data.tolist()
             edgelist = list(zip(edgelist[0],edgelist[1]))
             G = nx.from_edgelist(edgelist)
-            edge_list = self.data
+            edge_list = torch.from_numpy(self.data).long()
             if nx.number_connected_components(G) > 1:
                 Gcc = sorted(nx.connected_components(G), key=len, reverse=True)
                 G = G.subgraph(Gcc[0])
@@ -82,9 +82,8 @@ class Preprocessing():
             for idx in range(len(temp)):
                 edge_list[0, idx] = temp[idx].split()[0]
                 edge_list[1, idx] = temp[idx].split()[1]
+            edge_list = torch.from_numpy(edge_list).long()
             return edge_list, N, G
-        if self.data_type == 'kaa':
-            return None, None, None
 
 
     def labels(self):

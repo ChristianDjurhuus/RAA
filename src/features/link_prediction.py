@@ -28,9 +28,9 @@ class Link_prediction():
 
     def link_prediction(self):
         with torch.no_grad():
-            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
+            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
                 Z = torch.softmax(self.Z, dim=0)
-                G = torch.sigmoid(self.G)
+                G = torch.sigmoid(self.Gate)
                 C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
 
                 M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
@@ -129,7 +129,6 @@ class Link_prediction():
             edge_list[1, idx] = temp[idx].split()[1]
         self.edge_list = torch.from_numpy(edge_list).long()
         self.G = G
-        self.data = torch.from_numpy(nx.adjacency_matrix(self.G).todense()).float()
         if cc_problem:
             print(f'''There was a problem when removing links from the train set which could have resulted in splitting
             the network into multiple components. We decided not to remove these links, however, the test set will be
@@ -138,6 +137,7 @@ class Link_prediction():
             {round((self.G.number_of_edges() / ((self.G.number_of_nodes()**2))*0.5)*100,2)}% - this is after removing
             edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
         if self.__class__.__name__ == 'KAA':
+            self.data = torch.from_numpy(nx.adjacency_matrix(self.G)).long()
             X_test = self.data.clone()
             X_test[:] = 0
             X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
