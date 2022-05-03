@@ -45,7 +45,6 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.latent_dim = d
 
         self.beta = torch.nn.Parameter(torch.FloatTensor(1, self.N, device = self.device)[0].uniform_(3, 5))
-        self.beta = torch.nn.Parameter(torch.randn((self.N), device = self.device))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
 
         self.missing_data = False
