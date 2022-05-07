@@ -11,6 +11,8 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size = 0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None):
         super(LSM, self).__init__()
         self.data_type = data_type
+        self.test_size = test_size
+        self.link_pred = link_pred
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         if self.data_type != "sparse":
@@ -36,7 +38,6 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
 
         self.test_size = test_size
         if link_pred:
-            self.test_size = test_size
             Link_prediction.__init__(self)
 
         Visualization.__init__(self)
@@ -44,7 +45,8 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.input_size = (self.N, self.N)
         self.latent_dim = d
 
-        self.beta = torch.nn.Parameter(torch.FloatTensor(1, self.N, device = self.device)[0].uniform_(3, 5))
+        # initialize beta to follow a Uniform(3,5)
+        self.beta = torch.nn.Parameter((3-5) * torch.rand(1, self.N, device = self.device) + 5)
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
 
         self.missing_data = False

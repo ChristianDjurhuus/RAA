@@ -22,6 +22,8 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
 
         super(DRRAA, self).__init__()
         self.data_type = data_type
+        self.test_size = test_size
+        self.link_pred = link_pred
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
   
         if self.data_type != "sparse":
@@ -45,9 +47,8 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
 
             self.N = int(self.sparse_j_idx.max() + 1)
             
-        if link_pred:
-            self.test_size = test_size
-            Link_prediction.__init__(self)
+        #if link_pred:
+        #    Link_prediction.__init__(self)
         Link_prediction.__init__(self)
         Visualization.__init__(self)
 

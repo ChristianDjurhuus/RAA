@@ -17,7 +17,7 @@ class Visualization():
     def get_embeddings(self):
         if self.__class__.__name__ == "DRRAA":
             Z = torch.softmax(self.Z, dim=0)
-            G = torch.sigmoid(self.G)
+            G = torch.sigmoid(self.Gate)
             C = (Z.T * G) / (Z.T * G).sum(0)
 
             embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
@@ -88,16 +88,14 @@ class Visualization():
 
     def get_labels(self, attribute):
         # This only works with a gml file
-        graph = nx.read_gml(self.data)
-        return list(nx.get_node_attributes(graph, attribute).values())
+        return list(nx.get_node_attributes(self.G, attribute).values())
 
     def decision_boundary_linear(self, attribute):
         """
         Now only works for binary classes
         https://scipython.com/blog/plotting-the-decision-boundary-of-a-logistic-regression-model/
         """
-        if self.labels == "":
-            self.labels = self.get_labels(attribute)
+        self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
@@ -120,7 +118,7 @@ class Visualization():
         print((ymin, ymax))
         xd = np.array([xmin, xmax])
         yd = m * xd + c
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(dpi = 100)
         ax.set_xlim(left = xmin, right = xmax)
         ax.set_ylim(bottom = ymin, top = ymax)
         ax.plot(xd, yd, 'k', lw = 1, ls = '--')
@@ -130,25 +128,15 @@ class Visualization():
         ax.scatter(*X[y == 1].T, s = 8, alpha=0.5)
         ax.set_ylabel(r'$x_2$', fontsize = "medium")
         ax.set_xlabel(r'$x_1$', fontsize = "medium")
-        ax.set_title("Decision Boundary", fontsize = "large")
+        ax.set_title("Decision Boundary - LR", fontsize = "large")
+        fig.savefig("Desicion_boundary_LR.pdf")
         plt.show()
-        #plt.plot(xd, yd, 'k', lw = 1, ls = '--')
-        #plt.fill_between(xd, yd, ymin, color='tab:blue', alpha=0.2)
-        #plt.fill_between(xd, yd, ymax, color='tab:orange', alpha=0.2)
 
-        #plt.scatter(*X[y == 0].T, s = 8, alpha=0.5)
-        #plt.scatter(*X[y == 1].T, s = 8, alpha=0.5)
-        #plt.xlim(xmin, xmax)
-        #plt.ylim(ymin, ymax)
-        #plt.ylabel(r'$x_2$')
-        #plt.xlabel(r'$x_1$')
-        #plt.show()
         return reg.score(test_X, test_y)
 
     def decision_boundary_knn(self, attribute, n_neighbors = 10): #TODO test if this works
         # https://stackoverflow.com/questions/45075638/graph-k-nn-decision-boundaries-in-matplotlib
-        if self.labels == "":
-            self.labels = self.get_labels(attribute)
+        self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
@@ -170,7 +158,7 @@ class Visualization():
 
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
-        ax, fig = plt.subplots(dpi = 100)
+        fig, ax = plt.subplots(dpi = 100)
         ax.pcolormesh(xx, yy, Z, cmap=cmap_light)
 
         # Plot also the training points
@@ -178,5 +166,8 @@ class Visualization():
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
         ax.set_title("Desicion boundary - KNN")
+        fig.savefig("Desicion_boundary_KNN.pdf")
         plt.show()
+
+        return knn.score(test_X, test_y)
 

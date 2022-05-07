@@ -19,10 +19,10 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        if self.__class__.__name__ != "KAA" and self.data_type != "sparse":
+        if self.__class__.__name__ != "KAA" and self.data_type != "sparse" and not self.link_pred:
             self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
-        while (True not in self.target or False not in self.target) and self.__class__.__name__ == "KAA":
-            self.target, self.idx_i_test, self.idx_j_test, self.X_test = self.get_test_and_train()
+        #while (True not in self.target or False not in self.target) and self.__class__.__name__ == "KAA":
+        #    self.target, self.idx_i_test, self.idx_j_test, self.X_test = self.get_test_and_train()
 
 
     def link_prediction(self):
@@ -30,7 +30,7 @@ class Link_prediction():
             if self.data_type != "sparse":
                 if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating":
                     Z = torch.softmax(self.Z, dim=0)
-                    G = torch.sigmoid(self.G)
+                    G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
 
                     M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_i_test])).T #Size of test set e.g. K x N
@@ -224,10 +224,10 @@ class Link_prediction():
 
     def get_labels(self, attribute):
         # This only works with a gml file
-        graph = nx.read_gml(self.data)
-        return list(nx.get_node_attributes(graph, attribute).values())
+        return list(nx.get_node_attributes(self.G, attribute).values())
 
     def get_embeddings(self):
+        # TODO extend this to all the other classes.
         if self.__class__.__name__ == "DRRAA":
             Z = torch.softmax(self.Z, dim=0)
             G = torch.sigmoid(self.Gate)
@@ -242,9 +242,7 @@ class Link_prediction():
             return self.latent_Z.cpu().detach().numpy(), 0
 
     def KNeighborsClassifier(self, attribute, n_neighbors = 10):
-        if self.labels == "":
-            self.labels = self.get_labels(attribute)
-        # TODO Talk about how we get the split
+        self.labels = self.get_labels(attribute)
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
@@ -252,9 +250,8 @@ class Link_prediction():
         knn = KNeighborsClassifier(n_neighbors = n_neighbors).fit(train_X, train_y)
         return knn.score(test_X, test_y)
     
-    def k_means(self, attribute, n_clusters):
-        if self.labels == "":
-            self.labels = self.get_lables(attribute)
+    def k_means(self, attribute, n_clusters = 10):
+        self.labels = self.get_lables(attribute)
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
@@ -264,8 +261,7 @@ class Link_prediction():
         return kmeans.score(test_X, test_y)
 
     def logistic_regression(self, attribute):
-        if self.labels == "":
-            self.labels = self.get_lables(attribute)
+        self.labels = self.get_lables(attribute)
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
