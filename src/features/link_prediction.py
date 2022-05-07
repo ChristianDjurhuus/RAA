@@ -19,7 +19,7 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        if self.__class__.__name__ != "KAA" and self.data_type != "sparse" and not self.link_pred:
+        if self.__class__.__name__ != "KAA" and self.data_type != "sparse" and self.link_pred:
             self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
         #while (True not in self.target or False not in self.target) and self.__class__.__name__ == "KAA":
         #    self.target, self.idx_i_test, self.idx_j_test, self.X_test = self.get_test_and_train()
