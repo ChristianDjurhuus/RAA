@@ -251,7 +251,7 @@ class Link_prediction():
         return knn.score(test_X, test_y)
     
     def k_means(self, attribute, n_clusters = 10):
-        self.labels = self.get_lables(attribute)
+        self.labels = self.get_labels(attribute)
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
@@ -261,7 +261,7 @@ class Link_prediction():
         return kmeans.score(test_X, test_y)
 
     def logistic_regression(self, attribute):
-        self.labels = self.get_lables(attribute)
+        self.labels = self.labels(attribute)
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
