@@ -19,7 +19,7 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        if self.__class__.__name__ != "KAA" and self.data_type != "sparse" and self.link_pred:
+        if self.data_type != "sparse" and self.link_pred:
             self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
         #while (True not in self.target or False not in self.target) and self.__class__.__name__ == "KAA":
         #    self.target, self.idx_i_test, self.idx_j_test, self.X_test = self.get_test_and_train()
@@ -179,12 +179,13 @@ class Link_prediction():
             {round((self.G.number_of_edges() / ((self.G.number_of_nodes()**2))*0.5)*100,2)}% - this is after removing
             edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
         if self.__class__.__name__ == 'KAA':
-            self.data = torch.from_numpy(nx.adjacency_matrix(self.G)).long()
+            self.data = torch.from_numpy(nx.to_numpy_array(self.G)).long()
             X_test = self.data.clone()
             X_test[:] = 0
             X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
             self.data[idx_i_test, idx_j_test] = 0
-            return target, idx_i_test, idx_j_test, X_test
+            self.X_test = X_test
+            return target, idx_i_test, idx_j_test
         return target, idx_i_test, idx_j_test
 
     def KAA_test_train(self):
