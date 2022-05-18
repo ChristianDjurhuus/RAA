@@ -45,7 +45,8 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.latent_dim = d
 
         # initialize beta to follow a Uniform(3,5)
-        self.beta = torch.nn.Parameter((3-5) * torch.rand(1, self.N, device = self.device) + 5)[0]
+        #self.beta = torch.nn.Parameter((3-5) * torch.rand(1, self.N, device = self.device) + 5)
+        self.beta = torch.nn.Parameter(torch.randn((self.N), device = self.device))
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
 
         self.missing_data = False
