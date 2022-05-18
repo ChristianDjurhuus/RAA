@@ -8,30 +8,50 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3):
+    def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size = 0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None):
         super(LSM, self).__init__()
+        self.data_type = data_type
+        self.test_size = test_size
+        self.link_pred = link_pred
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
-        self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
-        if link_pred:
-            self.test_size = test_size
-            Link_prediction.__init__(self)
+
+        if self.data_type != "sparse":
+            Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
+            self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
+            self.sparse_i_idx = self.edge_list[0]
+            self.sparse_i_idx = self.sparse_i_idx.to(self.device)
+            self.sparse_j_idx = self.edge_list[1]
+            self.sparse_j_idx = self.sparse_j_idx.to(self.device)
+
+        if self.data_type == "sparse":
+            #create indices to index properly the receiver and senders variable
+            self.sparse_i_idx = data.to(self.device)
+            self.sparse_j_idx = data_2.to(self.device)
+            self.non_sparse_i_idx_removed = non_sparse_i.to(self.device)
+            self.non_sparse_j_idx_removed = non_sparse_j.to(self.device)
+            self.sparse_i_idx_removed = sparse_i_rem.to(self.device)
+            self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
+            self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
+            self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
+
+            self.N = int(self.sparse_j_idx.max() + 1)
+
+        self.test_size = test_size
+        Link_prediction.__init__(self)
 
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
         self.latent_dim = d
 
-        self.beta = torch.nn.Parameter(torch.randn((self.N), device = self.device))
+        # initialize beta to follow a Uniform(3,5)
+        self.beta = torch.nn.Parameter((3-5) * torch.rand(1, self.N, device = self.device) + 5)[0]
         self.latent_Z = torch.nn.Parameter(torch.randn(self.input_size[0], self.latent_dim, device = self.device))
 
         self.missing_data = False
         self.sampling_weights = torch.ones(self.N, device = self.device)
         self.sample_size = round(sample_size * self.N)
-        self.sparse_i_idx = self.edge_list[0]
-        self.sparse_i_idx = self.sparse_i_idx.to(self.device)
-        self.sparse_j_idx = self.edge_list[1]
-        self.sparse_j_idx = self.sparse_j_idx.to(self.device)
+
         # list for training loss
         self.losses = []
 
