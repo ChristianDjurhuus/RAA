@@ -39,7 +39,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 1000
+iter = 5000
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
@@ -135,6 +135,7 @@ conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1,
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
 
+ax.plot(K,np.mean(Iaucs),'bo')
 ax.errorbar(K, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,

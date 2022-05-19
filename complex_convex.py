@@ -124,6 +124,8 @@ ax.fill_between(num_arc,
                  y2 = [y for (x,y) in conf_AUCs.values()],
                  color='tab:blue', alpha=0.2)
 ax.axvline(8, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
+
+ax.plot(K,np.mean(avgIAUCs.values()),'bo')
 ax.errorbar(8, list(avgIAUCs.values()), 
             [abs(x-y)/2 for (x,y) in conf_IAUCs.values()],
             solid_capstyle='projecting', capsize=5,
