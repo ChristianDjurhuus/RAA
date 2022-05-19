@@ -1,3 +1,18 @@
+'''
+Compare the three models (KAA, RAA, LDM): 
+    Ideal predictor: True 
+    Run with synthetic data K = 8 
+    Synthetic alphas = 0.2, 1, 5 
+    N = 100 (wip) 
+    K = 2 .. 10 
+    D = 2 
+    CV = 5 
+    seed = 1998 
+    sample_size = 1 
+    Lr = 0.01 
+    Iterations = 10,000 
+'''
+
 from src.models.train_DRRAA_module import DRRAA
 from src.models.train_LSM_module import LSM
 from src.models.train_KAA_module import KAA
@@ -39,7 +54,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 5000
+iter = 10000
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
@@ -100,7 +115,7 @@ for kval in kvals:
                         scale=st.sem(kaa_aucs))
 
 
-fig, ax = plt.subplots(figsize=(10,5), dpi=100)
+fig, ax = plt.subplots(figsize=(10,5), dpi=500)
 ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='C1')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_raa_aucs.values()],
@@ -135,15 +150,16 @@ conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1,
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
 
-ax.plot(K,np.mean(Iaucs),'bo')
+ax.plot(K,np.mean(Iaucs),'bo',markersize=5)
 ax.errorbar(K, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="mean ideal AUC with 95% CI", color='b')
+            label="ideal predictor", color='b')
 
 ax.axvline(K, linestyle = '--', color='C4', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
-ax.set_xlabel("k: Number of archetypes")
+ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
 ax.legend()
+plt.savefig("synthetic_model_comparison.png", dpi=500)
 plt.show()

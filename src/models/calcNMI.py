@@ -15,9 +15,9 @@ def calcMI(Z1, Z2):
         MI Mutual information between Z1 and Z2
     Inspired from source code provided by Morten Mørup
     '''
-    if Z1.shape[1] != Z2.shape[1]:
-        print('OOPS! Number of columns need to be equal in the two matrices! (Try transposing one of them)')
-        return np.nan
+    #if Z1.shape[1] != Z2.shape[1]:
+    #    print('OOPS! Number of columns need to be equal in the two matrices! (Try transposing one of them)')
+    #    return np.nan
     
     P=Z1@Z2.T
     PXY=P/torch.sum(torch.sum(P))
