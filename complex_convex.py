@@ -30,7 +30,7 @@ conf_IAUCs = {}
 #Get synthetic data and convert to edge list
 true_k = 8
 true_alpha = 0.2
-adj_m, z, A, Z_true = main(alpha=true_alpha, k=true_k, dim=2, nsamples=100) #z is cmap
+adj_m, z, A, Z_true, beta = main(alpha=true_alpha, k=true_k, dim=2, nsamples=100, rand=False) #z is cmap
 G = nx.from_numpy_matrix(adj_m.numpy())
 temp = [x for x in nx.generate_edgelist(G, data=False)]
 edge_list = np.zeros((2, len(temp)))
@@ -124,6 +124,8 @@ ax.fill_between(num_arc,
                  y2 = [y for (x,y) in conf_AUCs.values()],
                  color='tab:blue', alpha=0.2)
 ax.axvline(8, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
+
+ax.plot(K,np.mean(avgIAUCs.values()),'bo')
 ax.errorbar(8, list(avgIAUCs.values()), 
             [abs(x-y)/2 for (x,y) in conf_IAUCs.values()],
             solid_capstyle='projecting', capsize=5,

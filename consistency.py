@@ -31,7 +31,7 @@ d=2
 archs = [2, 3, 4, 5, 6, 7, 8]
 NMIs = []
 for k in archs:
-    adj_m, z, A, Z_true = main(alpha=.2, k=k, dim=d, nsamples=1000) #z is cmap
+    adj_m, z, A, Z_true, beta = main(alpha=.2, k=k, dim=d, nsamples=100, rand=False) #z is cmap
     Graph = nx.from_numpy_matrix(adj_m.numpy())
     temp = [x for x in nx.generate_edgelist(Graph, data=False)]
     edge_list = np.zeros((2, len(temp)))

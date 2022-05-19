@@ -78,7 +78,6 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
         a = 1
         b = nsamples
         beta = torch.FloatTensor(a, b).uniform_(r1, r2).reshape(-1)
-        dim_matrix = torch.rand(d, k)
     else:
         beta = torch.ones(nsamples)
         #dim_matrix = torch.rand(d, k)
@@ -97,9 +96,9 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     triu = torch.triu(adj_m)
     adj_m = triu + triu.T - torch.diag(torch.diagonal(adj_m))
     adj_m = adj_m - torch.diag(torch.diagonal(adj_m))
-    return adj_m
+    return adj_m, beta
 
-def ideal_prediction(adj_m, A, Z, beta=None, test_size = 0.5):
+def ideal_prediction(adj_m, A, Z, beta, test_size = 0.5):
         '''
         A: Arcetypes
         Z: sampled datapoints
@@ -107,7 +106,7 @@ def ideal_prediction(adj_m, A, Z, beta=None, test_size = 0.5):
         num_samples = round(test_size * 0.5* (adj_m.shape[0] * (adj_m.shape[0] - 1)))
         idx_i_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[0])), num_samples=num_samples,
                                 replacement=True)
-                                #
+        #Only sample upper corner
         idx_j_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[1])), num_samples=num_samples,
                                         replacement=True)
 
@@ -116,9 +115,9 @@ def ideal_prediction(adj_m, A, Z, beta=None, test_size = 0.5):
         value_test = adj_m[idx_i_test, idx_j_test].numpy()
 
 
-        if beta == None:
-            beta = torch.ones(adj_m.shape[0])
-            beta_matrix = beta.unsqueeze(1) + beta
+        #if beta == None:
+        #    beta = torch.ones(adj_m.shape[0])
+
         M_i = torch.matmul(A, Z[:, idx_i_test]).T
         M_j = torch.matmul(A, Z[:, idx_j_test]).T
         z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5
@@ -129,9 +128,9 @@ def ideal_prediction(adj_m, A, Z, beta=None, test_size = 0.5):
         return auc_score, fpr, tpr
 
 
-def main(alpha, k, dim, nsamples):
+def main(alpha, k, dim, nsamples, rand):
     synth_data, A, Z = synthetic_data(k, dim, alpha, nsamples)
-    adj_m = generate_network_bias(A, Z, k, dim, nsamples, rand=False)
+    adj_m, beta = generate_network_bias(A, Z, k, dim, nsamples, rand)
 
     #Calculating density
     xy = np.vstack((synth_data[:,0].numpy(), synth_data[:,1].numpy()))
@@ -160,7 +159,7 @@ def main(alpha, k, dim, nsamples):
     #plt.savefig(f'synt_adjacency_{alpha}.png')
     #plt.show()
 
-    return adj_m, z, A, Z
+    return adj_m, z, A, Z, beta
 
     
 
