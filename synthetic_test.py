@@ -60,7 +60,7 @@ k=3
 d=2
 nsamples=100
 alphas = [0.2, 1, 5]
-iter = 10000
+iter = 10
 for alpha in alphas:
     #Creating synth data
     adj_m, z, A, Z_true = main(alpha, k, d, nsamples)
@@ -243,15 +243,6 @@ ax.legend()
 ax.grid(alpha=.3)
 #plt.savefig("RAA_properties_AUC.pdf")
 plt.show()
-
-
-###########################
-####    Comparison      ###
-#### RAA and baselines  ###
-###########################
-
-
-
 
 
 

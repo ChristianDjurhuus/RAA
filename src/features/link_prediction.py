@@ -67,7 +67,7 @@ class Link_prediction():
             auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())
             return auc_score, fpr, tpr
 
-    def ideal_prediction(self, A, Z, beta=None):
+    def ideal_prediction(self, adj_m, A, Z, beta=None):
         '''
         A: Arcetypes
         Z: sampled datapoints
@@ -75,10 +75,11 @@ class Link_prediction():
         with torch.no_grad():
             if beta == None:
                 beta = torch.ones(self.N)
+                beta_matrix = beta.unsqueeze(1) + beta
             M_i = torch.matmul(A, Z[:, self.idx_i_test]).T
             M_j = torch.matmul(A, Z[:, self.idx_j_test]).T
             z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5
-            theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)
+            theta = (beta[self.idx_i_test] + beta[self.idx_j_test] - z_pdist_test)
             rate = torch.exp(theta)
             fpr, tpr, threshold = metrics.roc_curve(self.target, rate.cpu().data.numpy())
             auc_score = metrics.roc_auc_score(self.target, rate.cpu().data.numpy())

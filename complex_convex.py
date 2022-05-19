@@ -11,11 +11,16 @@ import matplotlib as mpl
 import scipy.stats as st
 from tqdm import tqdm
 
-seed = 42
+seed = 1998
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
-iter = 5000
+def setup_mpl():
+    mpl.rcParams['font.family'] = 'Times New Roman'
+    return
+setup_mpl()
+
+iter = 10
 avgNMIs = {}
 avgAUCs = {}
 avgIAUCs = {}
@@ -23,7 +28,9 @@ conf_NMIs = {}
 conf_AUCs = {}
 conf_IAUCs = {}
 #Get synthetic data and convert to edge list
-adj_m, z, A, Z_true = main(alpha=.2, k=3, dim=2, nsamples=100) #z is cmap
+true_k = 8
+true_alpha = 0.2
+adj_m, z, A, Z_true = main(alpha=true_alpha, k=true_k, dim=2, nsamples=100) #z is cmap
 G = nx.from_numpy_matrix(adj_m.numpy())
 temp = [x for x in nx.generate_edgelist(G, data=False)]
 edge_list = np.zeros((2, len(temp)))
@@ -31,7 +38,7 @@ for i in range(len(temp)):
     edge_list[0, i] = temp[i].split()[0]
     edge_list[1, i] = temp[i].split()[1]
 
-edge_list = torch.FloatTensor(edge_list).long()
+#edge_list = torch.FloatTensor(edge_list).long()
 num_arc =  [2,3,4,5,6,7,8,9,10]
 d = 2
 for k in tqdm(num_arc):
@@ -41,7 +48,7 @@ for k in tqdm(num_arc):
     for i in tqdm(range(10)):
         model = DRRAA(k=k,
                     d=d, 
-                    sample_size=0.5, #Without random sampling
+                    sample_size=1, #Without random sampling
                     data=edge_list,
                     link_pred=True)
 
@@ -52,7 +59,7 @@ for k in tqdm(num_arc):
             IAUCs.append(ideal_score)
         AUCs.append(auc_score)
         Z = F.softmax(model.Z, dim=0)
-        G = F.sigmoid(model.G)
+        G = F.sigmoid(model.Gate)
         C = (Z.T * G) / (Z.T * G).sum(0)
 
         u, sigma, v = torch.svd(model.A) # Decomposition of A.
@@ -89,24 +96,20 @@ for k in tqdm(num_arc):
                     loc=np.mean(AUCs), 
                     scale=st.sem(AUCs))
     
-    if k == 8:
+    if k == true_k:
         avgIAUCs[k] = np.mean(IAUCs)
         conf_IAUCs[k] = st.t.interval(alpha=0.95, df=len(IAUCs)-1, 
                         loc=np.mean(IAUCs), 
                         scale=st.sem(IAUCs))
 
-mpl.rcParams['font.family'] = 'Times New Roman'
 fig, ax = plt.subplots(figsize=(10,5), dpi=100)
 ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI with 95% CI")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_NMIs.values()],
                  y2 = [y for (x,y) in conf_NMIs.values()],
                  color='tab:blue', alpha=0.2)
-#ax.errorbar(num_arc,list(avgNMIs.values()), 
-#            [abs(x-y)/2 for (x,y) in conf_NMIs.values()],
-#            solid_capstyle='projecting', capsize=5,
-#            label="mean NMI with 95% CI")
-ax.axvline(8, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
+
+ax.axvline(true_k, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
 ax.set_xlabel("k (Number of archetypes)")
 ax.set_title(r"The NMI with different number of archetypes")
 ax.set_ylabel("score")
@@ -132,24 +135,3 @@ ax.legend()
 #plt.savefig("complex_AUC.pdf")
 plt.show()
 
-
-
-
-'''mpl.rcParams['font.family'] = 'Times New Roman'
-fig, ax = plt.subplots(figsize=(10,5))
-ax.plot(num_arc, NMIs, '-o', label='NMIs')
-ax.axvline(6, linestyle = '--', color='r', label="True number of Archetypes")
-ax.set_xlabel("alpha value")
-ax.set_title("The NMI with different alpha values")
-ax.set_ylabel("score")
-ax.legend()
-plt.show()
-
-fig, ax = plt.subplots(figsize=(10,5))
-ax.plot(num_arc, AUCs, '-o', label='AUCs')
-ax.axvline(6, linestyle = '--', color='r', label="True number of Archetypes")
-ax.set_xlabel("k")
-ax.set_title("The AUC with different number of archetypes")
-ax.set_ylabel("score")
-ax.legend()
-plt.show()'''

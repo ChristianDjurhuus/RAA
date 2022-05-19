@@ -84,6 +84,7 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
         #dim_matrix = torch.diag(torch.tensor([40,40,40])).float()
 
     beta_matrix = beta.unsqueeze(1) + beta
+    beta_matrix = beta_matrix/2
     #M = torch.matmul(dim_matrix, torch.matmul(A, Z)).T # (N x K)
     M = torch.matmul(A, Z).T
     z_dist = ((M.unsqueeze(1) - M + 1e-06)**2).sum(-1)**0.5 # (N x N)
