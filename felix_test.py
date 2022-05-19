@@ -9,7 +9,7 @@ import matplotlib as mpl
 from src.data.synthetic_data import main
 import networkx as nx
 
-seed = 1998
+seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -42,6 +42,9 @@ for i in range(len(temp)):
 #Defining models
 iter = 10000
 
+seed = 42
+torch.random.manual_seed(seed)
+np.random.seed(seed)
 
 raa = DRRAA(d=d,k=3,
             sample_size=1, #Without random sampling
