@@ -111,7 +111,7 @@ def ideal_prediction(adj_m, A, Z, beta=None, test_size = 0.5):
         idx_j_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[1])), num_samples=num_samples,
                                         replacement=True)
 
-        adj_m = torch.tensor(adj_m)
+        adj_m = adj_m.clone().detach()
 
         value_test = adj_m[idx_i_test, idx_j_test].numpy()
 
