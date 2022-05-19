@@ -15,7 +15,7 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class RAA(nn.Module, Link_prediction, Preprocessing, Visualization):
-    def __init__(self, A, edge_list, input_size, k, sample_size, sampling_weights, data_type='edge list', test_size=0.3):
+    def __init__(self, A, edge_list, input_size, k, sample_size, sampling_weights, data_type='edge list', test_size=0.3, data_2=None):
         super(RAA, self).__init__()
         self.A = A
         self.edge_list = edge_list
@@ -23,7 +23,7 @@ class RAA(nn.Module, Link_prediction, Preprocessing, Visualization):
         self.k = k
         self.test_size = test_size
         self.data_type = data_type
-        Preprocessing.__init__(self, data=data, data_type=data_type, device=self.device, data_2=data_2)
+        Preprocessing.__init__(self, data=edge_list, data_type=data_type, device=self.device, data_2=data_2)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
         Link_prediction.__init__(self)
         self.beta = torch.nn.Parameter(torch.randn(self.input_size[0]))
