@@ -51,7 +51,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 10
+iter = 10000
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
