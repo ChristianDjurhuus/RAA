@@ -30,7 +30,7 @@ conf_IAUCs = {}
 #Get synthetic data and convert to edge list
 true_k = 8
 true_alpha = 0.2
-adj_m, z, A, Z_true = main(alpha=true_alpha, k=true_k, dim=2, nsamples=100) #z is cmap
+adj_m, z, A, Z_true, beta = main(alpha=true_alpha, k=true_k, dim=2, nsamples=100, rand=False) #z is cmap
 G = nx.from_numpy_matrix(adj_m.numpy())
 temp = [x for x in nx.generate_edgelist(G, data=False)]
 edge_list = np.zeros((2, len(temp)))

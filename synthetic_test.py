@@ -54,7 +54,6 @@ avgNMIs_bare = {}
 conf_NMIs_bare = {}
 conf_AUCs_bare = {}
 
-
 num_init = 5
 k=3
 d=2

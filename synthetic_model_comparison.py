@@ -29,7 +29,7 @@ real_alpha = 0.2
 K = 3
 n = 100
 d = 2
-adj_m, z, A, Z_true = main(alpha=real_alpha, k=K, dim=d, nsamples=n)
+adj_m, z, A, Z_true, beta = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
 G = nx.from_numpy_matrix(adj_m.numpy())
 
 temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -39,7 +39,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 10000
+iter = 1000
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
@@ -63,7 +63,7 @@ for _ in range(num_init):
     lsm_aucs.append(lsm_auc)
 
     #Prediction with ideal embeddings
-    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=None, test_size = 0.5)
+    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.5)
     Iaucs.append(ideal_score)
 
 for kval in kvals:
@@ -123,7 +123,7 @@ conf_lsm_aucs = st.t.interval(alpha=0.95, df=len(lsm_aucs)-1,
                         loc=np.mean(lsm_aucs), 
                         scale=st.sem(lsm_aucs))
 
-ax.plot(kvals, avg_lsm_aucs, '-o', label="LSM", color="C3")
+ax.plot(kvals, avg_lsm_aucs, '-o', label="LDM", color="C3")
 ax.fill_between(kvals,
                  y1 = [0]*len(kvals) + conf_lsm_aucs[0],
                  y2 = [0]*len(kvals) + conf_lsm_aucs[1],
