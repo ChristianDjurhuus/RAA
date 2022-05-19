@@ -23,11 +23,10 @@ class BDRRAA(nn.Module):
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k))
 
-        # self.u, self.sigma, self.vt = torch.svd(torch.nn.Parameter(torch.randn(self.d, self.k)))
-        # self.A = torch.nn.Parameter(self.sigma * self.vt)
+
         self.Z_i = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.Z_j = torch.nn.Parameter(torch.randn(self.k, self.input_size[1]))
-        # self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
+
         self.G = torch.nn.Parameter(torch.randn(self.input_size[0]+self.input_size[1], self.k))
 
 

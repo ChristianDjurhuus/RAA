@@ -30,7 +30,7 @@ class RAA(nn.Module, Link_prediction, Preprocessing, Visualization):
         self.softplus = nn.Softplus()
         self.a = torch.nn.Parameter(torch.randn(1))
         self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
-        #self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
+
         self.G = torch.nn.Parameter(torch.randn(self.input_size[0], self.k))
 
         self.sampling_weights = sampling_weights

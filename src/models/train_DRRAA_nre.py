@@ -37,10 +37,9 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.beta = torch.ones(self.input_size[0], device = self.device) # no random effects
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k, device = self.device))
-        #self.u, self.sigma, self.vt = torch.svd(torch.nn.Parameter(torch.randn(self.d, self.k)))
-        #self.A = torch.nn.Parameter(self.sigma * self.vt)
+
         self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0], device = self.device))
-        #self.Z = torch.nn.Parameter(torch.load("src/models/S_initial.pt"))
+
         self.Gate = torch.nn.Parameter(torch.randn(self.input_size[0], self.k, device = self.device))
 
         self.missing_data = False
@@ -99,7 +98,7 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
 
-    def train(self, iterations, LR = 0.01, print_loss = True):
+    def train(self, iterations, LR = 0.01, print_loss = False):
         optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
 
         for _ in range(iterations):
