@@ -69,7 +69,7 @@ lsm_aucs = []
 
 for _ in range(num_init):
     lsm = LSM(d=d, 
-                sample_size=0.5, #Without random sampling
+                sample_size=1, #Without random sampling
                 data=edge_list,
                 link_pred=True)
 
@@ -78,7 +78,7 @@ for _ in range(num_init):
     lsm_aucs.append(lsm_auc)
 
     #Prediction with ideal embeddings
-    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.5)
+    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.3)
     Iaucs.append(ideal_score)
 
 for kval in kvals:

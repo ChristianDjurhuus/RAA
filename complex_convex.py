@@ -1,5 +1,22 @@
+'''
+Estimate complex convex hull: 
+    Ideal predictor: True 
+    Run with synthetic data K = 8 
+    Synthetic alpha = 0.05 (wip) 
+    N = 100 (wip) 
+    K = 2 .. 10 
+    D = 2 
+    CV = 5 
+    seed = 1998 
+    sample_size = 1 (wip) 
+    Lr = 0.01 (default) 
+    Iterations = 10,000 
+'''
+
+
 from turtle import color
 from src.data.synthetic_data import main
+from src.data.synthetic_data import ideal_prediction
 from src.models.train_DRRAA_module import DRRAA
 import networkx as nx
 import numpy as np
@@ -20,13 +37,11 @@ def setup_mpl():
     return
 setup_mpl()
 
-iter = 10
+iter = 10000
 avgNMIs = {}
 avgAUCs = {}
-avgIAUCs = {}
 conf_NMIs = {}
 conf_AUCs = {}
-conf_IAUCs = {}
 #Get synthetic data and convert to edge list
 true_k = 8
 true_alpha = 0.2
@@ -41,11 +56,17 @@ for i in range(len(temp)):
 #edge_list = torch.FloatTensor(edge_list).long()
 num_arc =  [2,3,4,5,6,7,8,9,10]
 d = 2
+num_init = 5
+##Ideal prediction:
+Iaucs = []
+for _ in range(num_init):
+    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.5)
+    Iaucs.append(ideal_score)
+
 for k in tqdm(num_arc):
     NMIs = []
     AUCs = []
-    IAUCs = []
-    for i in tqdm(range(10)):
+    for i in tqdm(range(num_init)):
         model = DRRAA(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
@@ -54,9 +75,6 @@ for k in tqdm(num_arc):
 
         model.train(iterations=iter, LR=0.01)
         auc_score, fpr, tpr = model.link_prediction()
-        if k==8:
-            ideal_score, _, _ = model.ideal_prediction(A, Z_true)
-            IAUCs.append(ideal_score)
         AUCs.append(auc_score)
         Z = F.softmax(model.Z, dim=0)
         G = F.sigmoid(model.Gate)
@@ -66,23 +84,6 @@ for k in tqdm(num_arc):
         r = torch.matmul(torch.diag(sigma), v.T)
         embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
         archetypes = torch.matmul(r, torch.matmul(Z, C))
-
-        #if embeddings.shape[1] == 3:
-        #    fig = plt.figure(dpi=100)
-        #    ax = fig.add_subplot(projection='3d')
-        #    sc = ax.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(),
-        #                embeddings[:, 2].detach().numpy(), c = z)
-        #    ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(),
-        #                archetypes[2, :].detach().numpy(), marker='^', c='black')
-        #    fig.colorbar(sc, label="Density")
-            #plt.show()
-        #else:
-        #    fig, ax = plt.subplots(dpi=100)
-        #    sc = ax.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(), c = z)
-        #    ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
-        #    fig.colorbar(sc, label="Density")
-            #plt.show()
-
 
         #Calculate NMI between embeddings
         NMIs.append(calcNMI(Z, Z_true).item())
@@ -95,45 +96,45 @@ for k in tqdm(num_arc):
     conf_AUCs[k] = st.t.interval(alpha=0.95, df=len(AUCs)-1, 
                     loc=np.mean(AUCs), 
                     scale=st.sem(AUCs))
-    
-    if k == true_k:
-        avgIAUCs[k] = np.mean(IAUCs)
-        conf_IAUCs[k] = st.t.interval(alpha=0.95, df=len(IAUCs)-1, 
-                        loc=np.mean(IAUCs), 
-                        scale=st.sem(IAUCs))
 
-fig, ax = plt.subplots(figsize=(10,5), dpi=100)
-ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI with 95% CI")
+
+fig, ax = plt.subplots(figsize=(10,5), dpi=500)
+ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_NMIs.values()],
                  y2 = [y for (x,y) in conf_NMIs.values()],
                  color='tab:blue', alpha=0.2)
 
 ax.axvline(true_k, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
-ax.set_xlabel("k (Number of archetypes)")
-ax.set_title(r"The NMI with different number of archetypes")
-ax.set_ylabel("score")
+ax.set_xlabel("k: Number of archetypes in models")
+ax.set_ylabel("NMI")
 ax.legend()
-#plt.savefig("complex_NMI.pdf")
+ax.grid(alpha=.3)
+plt.savefig("complex_convex_NMI.png", dpi=500)
 plt.show()
 
-fig, ax = plt.subplots(figsize=(10,5), dpi=100)
-ax.plot(num_arc, list(avgAUCs.values()), '-o', label="mean AUC with 95% CI")
+fig, ax = plt.subplots(figsize=(10,5), dpi=500)
+ax.plot(num_arc, list(avgAUCs.values()), '-o', label="RAA")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_AUCs.values()],
                  y2 = [y for (x,y) in conf_AUCs.values()],
                  color='tab:blue', alpha=0.2)
 ax.axvline(8, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
 
-ax.plot(K,np.mean(avgIAUCs.values()),'bo')
-ax.errorbar(8, list(avgIAUCs.values()), 
-            [abs(x-y)/2 for (x,y) in conf_IAUCs.values()],
+conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
+                        loc=np.mean(Iaucs), 
+                        scale=st.sem(Iaucs))
+
+ax.plot(true_k, np.mean(Iaucs),'bo',markersize=5)
+ax.errorbar(true_k, np.mean(Iaucs), 
+            [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="mean ideal AUC with 95% CI", color='b')
-ax.set_xlabel("k (Number of archetypes)")
-ax.set_title("The AUC with different number of archetypes")
-ax.set_ylabel("score")
+            label="ideal predictor", color='b')
+
+ax.set_xlabel("k: Number of archetypes in models")
+ax.set_ylabel("AUC")
+ax.grid(alpha=.3)
 ax.legend()
-#plt.savefig("complex_AUC.pdf")
+plt.savefig("complex_convex.png",dpi=500)
 plt.show()
 

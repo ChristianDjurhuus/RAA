@@ -1,6 +1,16 @@
-###################################
-## Consistency evaluation of RAA ##
-###################################
+'''
+Model consistency: 
+    Run with synthetic data K - 2 .. 8 
+    Synthetic alpha = 0.2 
+    N = 100 
+    K = 3 
+    D = 2 
+    CV = 5 
+    seed = 1998 
+    Sample_size = 1 
+    Lr = 0.01 (default) 
+    Iterations = 10,000 
+'''
 
 from turtle import color
 from src.data.synthetic_data import main
@@ -60,10 +70,9 @@ for k in archs:
         NMI.append(calcNMI(Z, Z_true).item())
     NMIs.append(NMI)
 
-mpl.rcParams['font.family'] = 'Times New Roman'
-fig, ax = plt.subplots(figsize=(10,5), dpi=200)
+fig, ax = plt.subplots(figsize=(10,5), dpi=500)
 ax.boxplot(NMIs)
 ax.set_ylabel("NMI")
-ax.set_xlabel("k (number of archetypes)")
+ax.set_xlabel("k: number of archetypes")
 ax.grid(alpha=.3)
-plt.savefig("consistency_boxplot.png", dpi=200)
+plt.savefig("consistency.png", dpi=500)
