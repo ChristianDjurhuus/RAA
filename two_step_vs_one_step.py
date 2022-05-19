@@ -41,7 +41,7 @@ real_alpha = 0.2
 K = 3
 n = 100
 d = 2
-adj_m, z, A, Z_true = main(alpha=real_alpha, k=K, dim=d, nsamples=n)
+adj_m, z, A, Z_true, beta = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
 G = nx.from_numpy_matrix(adj_m.numpy())
 
 temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -51,7 +51,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 10000
+iter = 10
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
@@ -65,7 +65,7 @@ Iaucs = []
 
 for _ in range(num_init):
     #Prediction with ideal embeddings
-    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=None, test_size = 0.3)
+    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.3)
     Iaucs.append(ideal_score)
 
 for kval in kvals:
@@ -103,7 +103,7 @@ for kval in kvals:
                         scale=st.sem(ldmaa_aucs))
 
 
-fig, ax = plt.subplots(figsize=(10,5), dpi=100)
+fig, ax = plt.subplots(figsize=(10,5), dpi=500)
 ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='C1')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_raa_aucs.values()],
@@ -125,7 +125,7 @@ ax.plot(kvals, [y for (x,y) in conf_ldmaa_aucs.values()], '--', color='C2')
 conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
-ax.plot(K,np.mean(Iaucs),'bo')
+ax.plot(K,np.mean(Iaucs),'bo', markersize=5)
 ax.errorbar(K, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
@@ -136,4 +136,5 @@ ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes")
 ax.set_ylabel("AUC")
 ax.legend()
+plt.savefig('two_step_vs_one_step.png',dpi=500)
 plt.show()
