@@ -7,6 +7,7 @@ import numpy as np
 import scipy.stats as st
 import matplotlib as mpl 
 from src.data.synthetic_data import main
+from src.data.synthetic_data import ideal_prediction
 import networkx as nx
 
 seed = 1998
@@ -62,15 +63,7 @@ for _ in range(num_init):
     lsm_aucs.append(lsm_auc)
 
     #Prediction with ideal embeddings
-    ideal_raa = DRRAA(k=K,
-                    d=d,
-                    sample_size=1,
-                    data=edge_list,
-                    data_type = "edge list",
-                    link_pred = True
-        ) #Just to get model functions
-
-    ideal_score, _, _ = ideal_raa.ideal_prediction(adj_m, A, Z_true)
+    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=None, test_size = 0.5)
     Iaucs.append(ideal_score)
 
 for kval in kvals:
@@ -79,7 +72,7 @@ for kval in kvals:
     for _ in range(num_init):
         raa = DRRAA(k=kval,
                     d=d,
-                    sample_size=0.5,
+                    sample_size=1,
                     data=edge_list,
                     data_type = "edge list",
                     link_pred = True

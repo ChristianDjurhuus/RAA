@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as f
 from collections import defaultdict
 import pickle
+from sklearn import metrics
 ####################
 ## Synthetic data ##
 ####################
@@ -98,11 +99,37 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     adj_m = adj_m - torch.diag(torch.diagonal(adj_m))
     return adj_m
 
+def ideal_prediction(adj_m, A, Z, beta=None, test_size = 0.5):
+        '''
+        A: Arcetypes
+        Z: sampled datapoints
+    '''
+        num_samples = round(test_size * 0.5* (adj_m.shape[0] * (adj_m.shape[0] - 1)))
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[0])), num_samples=num_samples,
+                                replacement=True)
+                                #
+        idx_j_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[1])), num_samples=num_samples,
+                                        replacement=True)
+
+        adj_m = torch.tensor(adj_m)
+
+        value_test = adj_m[idx_i_test, idx_j_test].numpy()
+
+
+        if beta == None:
+            beta = torch.ones(adj_m.shape[0])
+            beta_matrix = beta.unsqueeze(1) + beta
+        M_i = torch.matmul(A, Z[:, idx_i_test]).T
+        M_j = torch.matmul(A, Z[:, idx_j_test]).T
+        z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5
+        theta = (beta[idx_i_test] + beta[idx_j_test] - z_pdist_test)
+        rate = torch.exp(theta)
+        fpr, tpr, threshold = metrics.roc_curve(value_test, rate.cpu().data.numpy())
+        auc_score = metrics.roc_auc_score(value_test, rate.cpu().data.numpy())
+        return auc_score, fpr, tpr
+
+
 def main(alpha, k, dim, nsamples):
-    seed = 1984
-    torch.random.manual_seed(seed)
-    np.random.seed(seed)
-    #d = 2
     synth_data, A, Z = synthetic_data(k, dim, alpha, nsamples)
     adj_m = generate_network_bias(A, Z, k, dim, nsamples, rand=False)
 
