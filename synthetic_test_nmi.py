@@ -45,7 +45,7 @@ import scipy.stats as st
 #TODO
 # Increasing # archetypes
 # Data with and without random effects (Degree heterogenity vs not)
-seed = 1998
+seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -193,7 +193,7 @@ plt.savefig("synthetic_test_nmi.png", dpi=500)
 #       Data with Random effects             #
 ##############################################
 
-seed = 1998
+seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 

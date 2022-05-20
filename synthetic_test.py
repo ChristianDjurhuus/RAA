@@ -47,7 +47,7 @@ import scipy.stats as st
 #TODO
 # Increasing # archetypes
 # Data with and without random effects (Degree heterogenity vs not)
-seed = 1998
+seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -179,14 +179,14 @@ ax.set_ylabel("AUC")
 ax.legend()
 ax.grid(alpha=.3)
 plt.savefig("synthetic_test.png", dpi=500)
-plt.show()
+#plt.show()
 
 
 ##############################################
 # Investigation of Random effects and Gating #
 #       Data with Random effects             #
 ##############################################
-seed = 1998
+seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -312,4 +312,4 @@ ax.set_ylabel("AUC")
 ax.legend()
 ax.grid(alpha=.3)
 plt.savefig("synthetic_test_re.png", dpi=500)
-plt.show()
+#plt.show()

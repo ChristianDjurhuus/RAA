@@ -25,7 +25,7 @@ from src.data.synthetic_data import main
 from src.data.synthetic_data import ideal_prediction
 import networkx as nx
 
-seed = 1998
+seed = 42
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -162,4 +162,4 @@ ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
 ax.legend()
 plt.savefig("synthetic_model_comparison.png", dpi=500)
-plt.show()
+#plt.show()
