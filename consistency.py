@@ -23,9 +23,8 @@ import matplotlib.pyplot as plt
 from src.models.calcNMI import calcNMI
 import matplotlib as mpl
 import scipy.stats as st
-from tqdm import tqdm
 
-seed = 1998
+seed = 1999
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -56,7 +55,8 @@ for k in archs:
         model = DRRAA(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=edge_list)
+                    data=edge_list,
+                    data_type='edge list')
         model.train(iterations=iter, LR=0.01)
 
         Z = F.softmax(model.Z, dim=0)

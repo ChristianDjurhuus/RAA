@@ -28,7 +28,7 @@ import matplotlib as mpl
 import scipy.stats as st
 from tqdm import tqdm
 
-seed = 1998
+seed = 1999
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 

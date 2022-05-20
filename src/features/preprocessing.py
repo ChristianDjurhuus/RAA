@@ -13,7 +13,7 @@ class Preprocessing():
 
     def convert_to_egde_list(self):
         if self.data_type == "edge list":
-            #Convert list to zipped list
+        #Convert list to zipped list
             edgelist = self.data.tolist()
             edgelist = list(zip(edgelist[0],edgelist[1]))
             G = nx.from_edgelist(edgelist)

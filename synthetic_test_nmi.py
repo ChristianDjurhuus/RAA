@@ -68,10 +68,14 @@ nsamples=100
 alphas = [0.2, 1, 5]
 iter = 10000
 for alpha in alphas:
-    #Creating synth data
     adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=False)
     Graph = nx.from_numpy_matrix(adj_m.numpy())
-    
+    temp = [x for x in nx.generate_edgelist(Graph, data=False)]
+    edge_list = np.zeros((2, len(temp)))
+    for i in range(len(temp)): 
+        edge_list[0, i] = temp[i].split()[0]
+        edge_list[1, i] = temp[i].split()[1]
+
     NMIs = []
     NMIs_ng = []
     NMIs_nr = []
@@ -80,26 +84,26 @@ for alpha in alphas:
     for i in range(num_init):
         RAA = DRRAA(k=k,
                     d=d, 
-                    sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx')
+                    sample_size=0.5, #Without random sampling
+                    data=edge_list,
+                    data_type='edge list')
         RAA_ng = DRRAA_ngating(k=k,
                     d=d, 
-                    sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx')
+                    sample_size=0.5, #Without random sampling
+                    data=edge_list,
+                    data_type='edge list')
         
         RAA_nr = DRRAA_nre(k=k,
                     d=d, 
-                    sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx')
+                    sample_size=0.5, #Without random sampling
+                    data=edge_list,
+                    data_type='edge list')
         
         RAA_bare = DRRAA_bare(k=k,
             d=d, 
-            sample_size=1, #Without random sampling
-            data=Graph,
-            data_type='networkx')
+            sample_size=0.5, #Without random sampling
+            data=edge_list,
+            data_type='edge list')
 
         RAA.train(iterations=iter, LR=0.01)
         RAA_ng.train(iterations=iter, LR=0.01)
@@ -178,7 +182,7 @@ ax.set_ylabel("NMI")
 ax.grid(alpha=.3)
 ax.legend()
 plt.savefig("synthetic_test_nmi.png", dpi=500)
-plt.show()
+#plt.show()
 
 
 
@@ -217,6 +221,12 @@ for alpha in alphas:
     #Creating synth data
     adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=True)
     Graph = nx.from_numpy_matrix(adj_m.numpy())
+    temp = [x for x in nx.generate_edgelist(Graph, data=False)]
+    edge_list = np.zeros((2, len(temp)))
+    for i in range(len(temp)): 
+        edge_list[0, i] = temp[i].split()[0]
+        edge_list[1, i] = temp[i].split()[1]
+    
 
     NMIs = []
     NMIs_ng = []
@@ -227,25 +237,25 @@ for alpha in alphas:
         RAA = DRRAA(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx')
+                    data=edge_list,
+                    data_type='edge list')
         RAA_ng = DRRAA_ngating(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx')
+                    data=edge_list,
+                    data_type='edge list')
         
         RAA_nr = DRRAA_nre(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx')
+                    data=edge_list,
+                    data_type='edge list')
         
         RAA_bare = DRRAA_bare(k=k,
             d=d, 
             sample_size=1, #Without random sampling
-            data=Graph,
-            data_type='networkx')
+            data=edge_list,
+            data_type='edge list')
 
         RAA.train(iterations=iter, LR=0.01)
         RAA_ng.train(iterations=iter, LR=0.01)
@@ -325,4 +335,4 @@ ax.set_ylabel("NMI")
 ax.grid(alpha=.3)
 ax.legend()
 plt.savefig("synthetic_test_nmi_re.png", dpi=500)
-plt.show()
+#plt.show()
