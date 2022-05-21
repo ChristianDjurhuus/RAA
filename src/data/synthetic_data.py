@@ -5,9 +5,11 @@ from scipy.stats import gaussian_kde
 import torch
 import torch.nn.functional as f
 from collections import defaultdict
-import pickle
 from sklearn import metrics
 import networkx as nx
+import community as community_louvain
+import matplotlib.cm as cm
+
 ####################
 ## Synthetic data ##
 ####################
@@ -125,6 +127,11 @@ def ideal_prediction(adj_m, A, Z, beta, test_size = 0.5):
         return auc_score, fpr, tpr
 
 
+def get_clusters(adj_m):
+    G = nx.from_numpy_matrix(adj_m.numpy())
+    partition = community_louvain.best_partition(G)
+    return partition
+
 def main(alpha, k, dim, nsamples, rand):
     synth_data, A, Z = synthetic_data(k, dim, alpha, nsamples)
     adj_m, beta = generate_network_bias(A, Z, k, dim, nsamples, rand)
@@ -186,7 +193,10 @@ def main(alpha, k, dim, nsamples, rand):
     #plt.savefig(f'synt_adjacency_{alpha}.png')
     #plt.show()
 
-    return adj_m, z, A, Z, beta
+    #Get louvain partitions
+    partition = get_clusters(adj_m)
+    #partition_cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
+    return adj_m, z, A, Z, beta, partition
 
     
 

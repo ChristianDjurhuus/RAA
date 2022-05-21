@@ -32,7 +32,7 @@ torch.random.manual_seed(seed)
 np.random.seed(seed)
 
 
-iter = 10
+iter = 10000
 avgNMIs = {}
 avgAUCs = {}
 conf_NMIs = {}
