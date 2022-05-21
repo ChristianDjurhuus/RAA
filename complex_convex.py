@@ -26,7 +26,6 @@ import matplotlib.pyplot as plt
 from src.models.calcNMI import calcNMI
 import matplotlib as mpl
 import scipy.stats as st
-from tqdm import tqdm
 
 seed = 42
 torch.random.manual_seed(seed)
@@ -63,10 +62,10 @@ for _ in range(num_init):
     ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.5)
     Iaucs.append(ideal_score)
 
-for k in tqdm(num_arc):
+for k in num_arc:
     NMIs = []
     AUCs = []
-    for i in tqdm(range(num_init)):
+    for i in range(num_init):
         model = DRRAA(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
@@ -105,13 +104,13 @@ for k in tqdm(num_arc):
 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI", c="#C4000D")
+ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI", c="#e3427d")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_NMIs.values()],
                  y2 = [y for (x,y) in conf_NMIs.values()],
-                 color='#C4000D', alpha=0.2)
+                 color='#e3427d', alpha=0.2)
 
-ax.axvline(true_k, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
+ax.axvline(true_k, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("NMI")
 ax.legend()
@@ -120,22 +119,22 @@ plt.savefig("complex_convex_NMI.png", dpi=500)
 plt.show()
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(num_arc, list(avgAUCs.values()), '-o', label="RAA", c="#C4000D")
+ax.plot(num_arc, list(avgAUCs.values()), '-o', label="RAA", c="#e3427d")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_AUCs.values()],
                  y2 = [y for (x,y) in conf_AUCs.values()],
-                 color="#C4000D", alpha=0.2)
-ax.axvline(8, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
+                 color="#e3427d", alpha=0.2)
+ax.axvline(8, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 
 conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
 
-ax.plot(true_k, np.mean(Iaucs),'o',markersize=5, c="#1F3DFF")
+ax.plot(true_k, np.mean(Iaucs),'o',markersize=5, c="#a0c4ff")
 ax.errorbar(true_k, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="ideal predictor", color='#1F3DFF')
+            label="ideal predictor", color='#a0c4ff')
 
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
