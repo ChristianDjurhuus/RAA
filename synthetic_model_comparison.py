@@ -171,5 +171,5 @@ plt.savefig("synthetic_model_comparison.png", dpi=500)
 
 
 raa_best.plot_latent_and_loss(iterations=iter, cmap=z)
-#kaa.plot_latent_and_loss(iterations=iter, cmap=z)
+kaa.plot_latent_and_loss(iterations=iter, cmap=z)
 lsm_best.plot_latent_and_loss(iterations=iter, cmap=z)
