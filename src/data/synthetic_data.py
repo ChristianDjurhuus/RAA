@@ -7,6 +7,7 @@ import torch.nn.functional as f
 from collections import defaultdict
 import pickle
 from sklearn import metrics
+import networkx as nx
 ####################
 ## Synthetic data ##
 ####################
@@ -114,10 +115,6 @@ def ideal_prediction(adj_m, A, Z, beta, test_size = 0.5):
 
         value_test = adj_m[idx_i_test, idx_j_test].numpy()
 
-
-        #if beta == None:
-        #    beta = torch.ones(adj_m.shape[0])
-
         M_i = torch.matmul(A, Z[:, idx_i_test]).T
         M_j = torch.matmul(A, Z[:, idx_j_test]).T
         z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5
@@ -131,6 +128,36 @@ def ideal_prediction(adj_m, A, Z, beta, test_size = 0.5):
 def main(alpha, k, dim, nsamples, rand):
     synth_data, A, Z = synthetic_data(k, dim, alpha, nsamples)
     adj_m, beta = generate_network_bias(A, Z, k, dim, nsamples, rand)
+
+    #Removing disconnected components
+    G = nx.from_numpy_matrix(adj_m.numpy())
+
+    if nx.number_connected_components(G) > 1:
+        Gcc = sorted(nx.connected_components(G), key=len, reverse=True)
+        G = G.subgraph(Gcc[0])
+        delete_Z = []
+        for i in range(len(Gcc)):
+            if Gcc[i] == Gcc[0]:
+                continue
+            else:
+                for j in range(len(Gcc[i])):
+                   delete_Z.append(list(Gcc[i])[j])
+        mask = torch.ones((Z.shape[0],Z.shape[1]), dtype=torch.bool)
+        mask[:, delete_Z] = False
+        Z = Z[mask].reshape(k, mask.shape[1]-len(delete_Z))
+
+        mask_adj = torch.ones((adj_m.shape[0],adj_m.shape[1]), dtype=torch.bool)
+        mask_adj[:, delete_Z] = False
+        mask_adj[delete_Z,:] = False
+        adj_m = adj_m[mask_adj].reshape(adj_m.shape[0] - len(delete_Z),adj_m.shape[1] - len(delete_Z))
+
+    
+    #label_map = {x: i for i, x in enumerate(G.nodes)}
+    #G = nx.relabel_nodes(G, label_map)
+
+
+
+
 
     #Calculating density
     xy = np.vstack((synth_data[:,0].numpy(), synth_data[:,1].numpy()))
@@ -164,8 +191,7 @@ def main(alpha, k, dim, nsamples, rand):
     
 
 
-if __name__ == "__main__":
-    main(alpha=0.05, k=10, dim=2, nsamples=1000)
+
 
 
 
