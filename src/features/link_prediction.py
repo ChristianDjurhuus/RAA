@@ -171,19 +171,19 @@ class Link_prediction():
         graph = nx.read_gml(self.data)
         return list(nx.get_node_attributes(graph, attribute).values())
 
-    def get_embeddings(self):
-        if self.__class__.__name__ == "DRRAA":
-            Z = torch.softmax(self.Z, dim=0)
-            G = torch.sigmoid(self.Gate)
-            C = (Z.T * G) / (Z.T * G).sum(0)
+    #def get_embeddings(self):
+    #    if self.__class__.__name__ == "DRRAA":
+    #        Z = torch.softmax(self.Z, dim=0)
+    #        G = torch.sigmoid(self.Gate)
+    #        C = (Z.T * G) / (Z.T * G).sum(0)
 
-            embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
-            embeddings = embeddings.cpu().detach().numpy()
-            archetypes = torch.matmul(self.A, torch.matmul(Z, C))
-            archetypes = archetypes.cpu().detach().numpy()
-            return embeddings, archetypes
-        if self.__class__.__name__ == "LSM":
-            return self.latent_Z.cpu().detach().numpy(), 0
+    #        embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
+    #        embeddings = embeddings.cpu().detach().numpy()
+    #        archetypes = torch.matmul(self.A, torch.matmul(Z, C))
+    #        archetypes = archetypes.cpu().detach().numpy()
+    #        return embeddings, archetypes
+    #    if self.__class__.__name__ == "LSM":
+    #        return self.latent_Z.cpu().detach().numpy(), 0
 
     def KNeighborsClassifier(self, attribute):
         if self.labels == "":
