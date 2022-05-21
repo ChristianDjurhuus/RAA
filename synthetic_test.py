@@ -68,7 +68,7 @@ k=3
 d=2
 nsamples=100
 alphas = [0.2, 1, 5]
-iter = 10
+iter = 10000
 for alpha in alphas:
     #Creating synth data
     adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=False)
