@@ -6,7 +6,7 @@ LDM with AA on embeddings vs. RAA:
 		K = 2 .. 10
 		D = 2
 		Inits = 5           #Number of inits.
-		seed = 1998
+		seed = 1999
 		sample_size = 1
 		Lr = 0.01
 		Iterations = 10,000
@@ -22,7 +22,7 @@ from src.data.synthetic_data import main
 from src.data.synthetic_data import ideal_prediction
 import networkx as nx
 
-seed = 1998
+seed = 1999
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
@@ -33,7 +33,7 @@ setup_mpl()
 
 #################################
 ## Synthetic model comparison  ##
-##      RAA and baselines      ##
+##       RAA and LSM+AA        ##
 #################################
 
 #Data creation
@@ -104,34 +104,34 @@ for kval in kvals:
 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='C1')
+ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='#C4000D')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_raa_aucs.values()],
                  y2 = [y for (x,y) in conf_raa_aucs.values()],
-                 color='C1', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='C1')
-ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='C1')
+                 color='#C4000D', alpha=0.2)
+ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='#C4000D')
+ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='#C4000D')
 
-ax.plot(kvals, avg_ldmaa_aucs.values(), '-o', label="LDM+AA", color='C2')
+ax.plot(kvals, avg_ldmaa_aucs.values(), '-o', label="LDM+AA", color='#4FFF57')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_ldmaa_aucs.values()],
                  y2 = [y for (x,y) in conf_ldmaa_aucs.values()],
-                 color='C2', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_ldmaa_aucs.values()], '--', color='C2')
-ax.plot(kvals, [y for (x,y) in conf_ldmaa_aucs.values()], '--', color='C2')
+                 color='#4FFF57', alpha=0.2)
+ax.plot(kvals, [x for (x,y) in conf_ldmaa_aucs.values()], '--', color='#4FFF57')
+ax.plot(kvals, [y for (x,y) in conf_ldmaa_aucs.values()], '--', color='#4FFF57')
 
 
 
 conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
-ax.plot(K,np.mean(Iaucs),'bo', markersize=5)
+ax.plot(K,np.mean(Iaucs),'o', markersize=5, color='#1F3DFF')
 ax.errorbar(K, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="ideal predicter", color='b')
+            label="ideal predicter", color='#1F3DFF')
 
-ax.axvline(K, linestyle = '--', color='C4', label="True number of Archetypes", alpha=0.5)
+ax.axvline(K, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
