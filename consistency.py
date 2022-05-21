@@ -34,7 +34,7 @@ def setup_mpl():
 setup_mpl()
 
 num_init = 5 
-iter = 10
+iter = 10000
 #Get synthetic data and convert to edge list
 d=2
 archs = [2, 3, 4, 5, 6, 7, 8]
