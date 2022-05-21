@@ -54,7 +54,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 10000
+iter = 10
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
@@ -62,10 +62,11 @@ avg_raa_aucs = {}
 avg_kaa_aucs = {}
 conf_raa_aucs = {}
 conf_kaa_aucs = {}
-
 Iaucs = []
-
 lsm_aucs = []
+
+best_lsm_auc = 0
+best_raa_auc = 0
 
 for _ in range(num_init):
     lsm = LSM(d=d, 
@@ -76,6 +77,8 @@ for _ in range(num_init):
     lsm.train(iterations=iter)
     lsm_auc, _, _ = lsm.link_prediction()
     lsm_aucs.append(lsm_auc)
+    if lsm_auc > best_lsm_auc:
+        lsm_best = lsm
 
     #Prediction with ideal embeddings
     ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.3)
@@ -95,6 +98,8 @@ for kval in kvals:
         raa.train(iterations=iter)
         raa_auc, _, _ = raa.link_prediction()
         raa_aucs.append(raa_auc)
+        if raa_auc > best_raa_auc:
+            raa_best = raa
 
         kaa = KAA(k=kval,
                   data=adj_m.numpy(),
@@ -163,3 +168,8 @@ ax.set_ylabel("AUC")
 ax.legend()
 plt.savefig("synthetic_model_comparison.png", dpi=500)
 #plt.show()
+
+
+raa_best.plot_latent_and_loss(iterations=iter, cmap=z)
+#kaa.plot_latent_and_loss(iterations=iter, cmap=z)
+lsm_best.plot_latent_and_loss(iterations=iter, cmap=z)
