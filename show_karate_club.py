@@ -11,16 +11,11 @@ seed = 1986
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
-def setup_mpl():
-    mpl.rcParams['font.family'] = 'Times New Roman'
-    return
-setup_mpl()
-
 #import data
 karate_club = nx.karate_club_graph()
 
 #define model
-k = 4
+k = 5
 RAA = DRRAA(d=2, k=k, data=karate_club, data_type='networkx',link_pred=False, sample_size=1)
 iter=10000
 RAA.train(iterations=iter)

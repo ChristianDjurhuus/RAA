@@ -26,10 +26,6 @@ seed = 1999
 torch.random.manual_seed(seed)
 np.random.seed(seed)
 
-def setup_mpl():
-    mpl.rcParams['font.family'] = 'Times New Roman'
-    return
-setup_mpl()
 
 #################################
 ## Synthetic model comparison  ##
