@@ -44,7 +44,7 @@ real_alpha = 0.2
 K = 3
 n = 100
 d = 2
-adj_m, z, A, Z_true, beta = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
+adj_m, z, A, Z_true, beta, partition_cmap = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
 G = nx.from_numpy_matrix(adj_m.numpy())
 
 temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -54,7 +54,7 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 #Defining models
-iter = 10
+iter = 10000
 num_init = 5
 kvals = [2,3,4,5,6,7,8]
 
@@ -67,6 +67,7 @@ lsm_aucs = []
 
 best_lsm_auc = 0
 best_raa_auc = 0
+best_kaa_auc = 0
 
 for _ in range(num_init):
     lsm = LSM(d=d, 
@@ -79,6 +80,7 @@ for _ in range(num_init):
     lsm_aucs.append(lsm_auc)
     if lsm_auc > best_lsm_auc:
         lsm_best = lsm
+        best_lsm_auc = lsm_auc
 
     #Prediction with ideal embeddings
     ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.3)
@@ -100,6 +102,7 @@ for kval in kvals:
         raa_aucs.append(raa_auc)
         if raa_auc > best_raa_auc:
             raa_best = raa
+            best_raa_auc = raa_auc
 
         kaa = KAA(k=kval,
                   data=adj_m.numpy(),
@@ -109,6 +112,9 @@ for kval in kvals:
         kaa.train(iterations=iter)
         kaa_auc, _, _ = kaa.link_prediction()
         kaa_aucs.append(kaa_auc)
+        if kaa_auc > best_kaa_auc:
+            kaa_best = kaa
+            best_kaa_auc = kaa_auc
 
     avg_raa_aucs[kval] = np.mean(raa_aucs)
     avg_kaa_aucs[kval] = np.mean(kaa_aucs)
@@ -170,6 +176,6 @@ plt.savefig("synthetic_model_comparison.png", dpi=500)
 #plt.show()
 
 
-raa_best.plot_latent_and_loss(iterations=iter, cmap=z)
-kaa.plot_latent_and_loss(iterations=iter, cmap=z)
-lsm_best.plot_latent_and_loss(iterations=iter, cmap=z)
+raa_best.plot_latent_and_loss(iterations=iter, cmap=partition_cmap)
+kaa_best.plot_latent_and_loss(iterations=iter, cmap=partition_cmap)
+lsm_best.plot_latent_and_loss(iterations=iter, cmap=partition_cmap)

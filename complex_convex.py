@@ -37,7 +37,7 @@ def setup_mpl():
     return
 setup_mpl()
 
-iter = 10
+iter = 10000
 avgNMIs = {}
 avgAUCs = {}
 conf_NMIs = {}
