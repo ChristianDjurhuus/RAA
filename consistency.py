@@ -71,13 +71,13 @@ for k in archs:
     NMIs.append(NMI)
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-c='#C4000D'
+c='#e3427d'
 ax.boxplot(NMIs,patch_artist=True,
            boxprops=dict( facecolor=c,color=c),
-           capprops=dict(color='black'),
-           whiskerprops=dict(color='black'),
+           capprops=dict(color='#303638'),
+           whiskerprops=dict(color='#303638'),
            flierprops=dict(color=c, markeredgecolor=c),
-           medianprops=dict(color='black'),
+           medianprops=dict(color='#303638'),
            )
 
 ax.set_ylabel("NMI")

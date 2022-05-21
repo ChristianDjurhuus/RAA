@@ -104,34 +104,34 @@ for kval in kvals:
 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='#C4000D')
+ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='#e3427d')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_raa_aucs.values()],
                  y2 = [y for (x,y) in conf_raa_aucs.values()],
-                 color='#C4000D', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='#C4000D')
-ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='#C4000D')
+                 color='#e3427d', alpha=0.2)
+ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='#e3427d')
+ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='#e3427d')
 
-ax.plot(kvals, avg_ldmaa_aucs.values(), '-o', label="LDM+AA", color='#4FFF57')
+ax.plot(kvals, avg_ldmaa_aucs.values(), '-o', label="LDM+AA", color='#bdb2ff')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_ldmaa_aucs.values()],
                  y2 = [y for (x,y) in conf_ldmaa_aucs.values()],
-                 color='#4FFF57', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_ldmaa_aucs.values()], '--', color='#4FFF57')
-ax.plot(kvals, [y for (x,y) in conf_ldmaa_aucs.values()], '--', color='#4FFF57')
+                 color='#bdb2ff', alpha=0.2)
+ax.plot(kvals, [x for (x,y) in conf_ldmaa_aucs.values()], '--', color='#bdb2ff')
+ax.plot(kvals, [y for (x,y) in conf_ldmaa_aucs.values()], '--', color='#bdb2ff')
 
 
 
 conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
-ax.plot(K,np.mean(Iaucs),'o', markersize=5, color='#1F3DFF')
+ax.plot(K,np.mean(Iaucs),'o', markersize=5, color='#a0c4ff')
 ax.errorbar(K, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="ideal predicter", color='#1F3DFF')
+            label="ideal predicter", color='#a0c4ff')
 
-ax.axvline(K, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
+ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")

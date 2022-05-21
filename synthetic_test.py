@@ -146,33 +146,33 @@ for alpha in alphas:
                     scale=st.sem(AUCs_bare))
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(alphas, list(avgAUCs.values()), '-o', label="RAA", color='#C4000D')
-ax.plot(alphas, [x for (x,y) in conf_AUCs.values()], '--', color='#C4000D')
-ax.plot(alphas, [y for (x,y) in conf_AUCs.values()], '--', color='#C4000D')
+ax.plot(alphas, list(avgAUCs.values()), '-o', label="RAA", color='#e3427d')
+ax.plot(alphas, [x for (x,y) in conf_AUCs.values()], '--', color='#e3427d')
+ax.plot(alphas, [y for (x,y) in conf_AUCs.values()], '--', color='#e3427d')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_AUCs.values()],
-                 y2 = [y for (x,y) in conf_AUCs.values()], color='#C4000D', alpha=0.2)
+                 y2 = [y for (x,y) in conf_AUCs.values()], color='#e3427d', alpha=0.2)
 
-ax.plot(alphas, list(avgAUCs_ng.values()), '-o', label="RAA no gating", color='#FF5924')
-ax.plot(alphas, [x for (x,y) in conf_AUCs_ng.values()], '--', color='#FF5924')
-ax.plot(alphas, [y for (x,y) in conf_AUCs_ng.values()], '--', color='#FF5924')
+ax.plot(alphas, list(avgAUCs_ng.values()), '-o', label="RAA no gating", color='#ffc6ff')
+ax.plot(alphas, [x for (x,y) in conf_AUCs_ng.values()], '--', color='#ffc6ff')
+ax.plot(alphas, [y for (x,y) in conf_AUCs_ng.values()], '--', color='#ffc6ff')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_AUCs_ng.values()],
-                 y2 = [y for (x,y) in conf_AUCs_ng.values()], color='#FF5924', alpha=0.2)
+                 y2 = [y for (x,y) in conf_AUCs_ng.values()], color='#ffc6ff', alpha=0.2)
 
-ax.plot(alphas, list(avgAUCs_nr.values()), '-o', label="RAA no random effects", color='#FFA6BD')
-ax.plot(alphas, [x for (x,y) in conf_AUCs_nr.values()], '--', color='#FFA6BD')
-ax.plot(alphas, [y for (x,y) in conf_AUCs_nr.values()], '--', color='#FFA6BD')
+ax.plot(alphas, list(avgAUCs_nr.values()), '-o', label="RAA no random effects", color='#5d4b20')
+ax.plot(alphas, [x for (x,y) in conf_AUCs_nr.values()], '--', color='#5d4b20')
+ax.plot(alphas, [y for (x,y) in conf_AUCs_nr.values()], '--', color='#5d4b20')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_AUCs_nr.values()],
-                 y2 = [y for (x,y) in conf_AUCs_nr.values()], color='#FFA6BD', alpha=0.2)
+                 y2 = [y for (x,y) in conf_AUCs_nr.values()], color='#5d4b20', alpha=0.2)
 
-ax.plot(alphas, list(avgAUCs_bare.values()), '-o', label="RAA no gating / random effects", color='#FF2459')
-ax.plot(alphas, [x for (x,y) in conf_AUCs_bare.values()], '--', color='#FF2459')
-ax.plot(alphas, [y for (x,y) in conf_AUCs_bare.values()], '--', color='#FF2459')
+ax.plot(alphas, list(avgAUCs_bare.values()), '-o', label="RAA no gating / random effects", color='#f0c808')
+ax.plot(alphas, [x for (x,y) in conf_AUCs_bare.values()], '--', color='#f0c808')
+ax.plot(alphas, [y for (x,y) in conf_AUCs_bare.values()], '--', color='#f0c808')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_AUCs_bare.values()],
-                 y2 = [y for (x,y) in conf_AUCs_bare.values()], color='#FF2459', alpha=0.2)
+                 y2 = [y for (x,y) in conf_AUCs_bare.values()], color='#f0c808', alpha=0.2)
 
 ax.set_xlabel(r"$\alpha$: Parameter of the Dirichlet Distribution")
 ax.set_ylabel("AUC")

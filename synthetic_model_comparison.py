@@ -127,21 +127,21 @@ for kval in kvals:
 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='#C4000D')
+ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='#e3427d')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_raa_aucs.values()],
                  y2 = [y for (x,y) in conf_raa_aucs.values()],
-                 color='#C4000D', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='#C4000D')
-ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='#C4000D')
+                 color='#e3427d', alpha=0.2)
+ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='#e3427d')
+ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='#e3427d')
 
-ax.plot(kvals, avg_kaa_aucs.values(), '-o', label="KAA (Jaccard)", color='#F2D42E')
+ax.plot(kvals, avg_kaa_aucs.values(), '-o', label="KAA (Jaccard)", color='#ffd6a5')
 ax.fill_between(kvals,
                  y1 = [x for (x,y) in conf_kaa_aucs.values()],
                  y2 = [y for (x,y) in conf_kaa_aucs.values()],
-                 color='#F2D42E', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_kaa_aucs.values()], '--', color='#F2D42E')
-ax.plot(kvals, [y for (x,y) in conf_kaa_aucs.values()], '--', color='#F2D42E')
+                 color='#ffd6a5', alpha=0.2)
+ax.plot(kvals, [x for (x,y) in conf_kaa_aucs.values()], '--', color='#ffd6a5')
+ax.plot(kvals, [y for (x,y) in conf_kaa_aucs.values()], '--', color='#ffd6a5')
 
 
 avg_lsm_aucs = [0]*len(kvals) + np.mean(lsm_aucs)
@@ -149,25 +149,25 @@ conf_lsm_aucs = st.t.interval(alpha=0.95, df=len(lsm_aucs)-1,
                         loc=np.mean(lsm_aucs), 
                         scale=st.sem(lsm_aucs))
 
-ax.plot(kvals, avg_lsm_aucs, '-o', label="LDM", color="#00C700")
+ax.plot(kvals, avg_lsm_aucs, '-o', label="LDM", color="#e68653")
 ax.fill_between(kvals,
                  y1 = [0]*len(kvals) + conf_lsm_aucs[0],
                  y2 = [0]*len(kvals) + conf_lsm_aucs[1],
-                 color='#00C700', alpha=0.2)
-ax.plot(kvals, [0]*len(kvals) + conf_lsm_aucs[0], '--', color='#00C700')
-ax.plot(kvals,  [0]*len(kvals) + conf_lsm_aucs[1], '--', color='#00C700')
+                 color='#e68653', alpha=0.2)
+ax.plot(kvals, [0]*len(kvals) + conf_lsm_aucs[0], '--', color='#e68653')
+ax.plot(kvals,  [0]*len(kvals) + conf_lsm_aucs[1], '--', color='#e68653')
 
 conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
 
-ax.plot(K,np.mean(Iaucs),'o',markersize=5,color='#1F3DFF')
+ax.plot(K,np.mean(Iaucs),'o',markersize=5,color='#a0c4ff')
 ax.errorbar(K, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="ideal predictor", color='#1F3DFF')
+            label="ideal predictor", color='#a0c4ff')
 
-ax.axvline(K, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
+ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
