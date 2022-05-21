@@ -156,12 +156,12 @@ ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs.values()],
                  y2 = [y for (x,y) in conf_NMIs.values()], color='#e3427d', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_ng.values()), '-o', label="RAA no gating", color='#ffc6ff')
-ax.plot(alphas, [x for (x,y) in conf_NMIs_ng.values()], '--', color='#ffc6ff')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_ng.values()], '--', color='#ffc6ff')
+ax.plot(alphas, list(avgNMIs_ng.values()), '-o', label="RAA no gating", color='#4c6e81')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_ng.values()], '--', color='#4c6e81')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_ng.values()], '--', color='#4c6e81')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_ng.values()],
-                 y2 = [y for (x,y) in conf_NMIs_ng.values()], color='#ffc6ff', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs_ng.values()], color='#4c6e81', alpha=0.2)
 
 ax.plot(alphas, list(avgNMIs_nr.values()), '-o', label="RAA no random effects", color='#5d4b20')
 ax.plot(alphas, [x for (x,y) in conf_NMIs_nr.values()], '--', color='#5d4b20')
