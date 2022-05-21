@@ -6,7 +6,7 @@ Model consistency:
     K = 3 
     D = 2 
     CV = 5 
-    seed = 1998 
+    seed = 42
     Sample_size = 1 
     Lr = 0.01 (default) 
     Iterations = 10,000 
@@ -34,7 +34,7 @@ def setup_mpl():
 setup_mpl()
 
 num_init = 5 
-iter = 10000
+iter = 10
 #Get synthetic data and convert to edge list
 d=2
 archs = [2, 3, 4, 5, 6, 7, 8]
@@ -71,7 +71,7 @@ for k in archs:
     NMIs.append(NMI)
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.boxplot(NMIs)
+ax.boxplot(NMIs, color='#C4000D')
 ax.set_ylabel("NMI")
 ax.set_xlabel("k: number of archetypes")
 ax.grid(alpha=.3)

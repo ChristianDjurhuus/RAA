@@ -7,7 +7,7 @@ Random effects and gating (NMI):
     K = 3 
     D = 2 
     CV = 5 
-    seed = 1998 
+    seed = 42
     Sample_size = 1 
     Lr = 0.01 (default)
     Iterations = 10,000 
@@ -149,33 +149,33 @@ for alpha in alphas:
                     scale=st.sem(NMIs_bare)) 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(alphas, list(avgNMIs.values()), '-o', label="RAA")
-ax.plot(alphas, [x for (x,y) in conf_NMIs.values()], '--', color='C0')
-ax.plot(alphas, [y for (x,y) in conf_NMIs.values()], '--', color='C0')
+ax.plot(alphas, list(avgNMIs.values()), '-o', label="RAA", color='#C4000D')
+ax.plot(alphas, [x for (x,y) in conf_NMIs.values()], '--', color='#C4000D')
+ax.plot(alphas, [y for (x,y) in conf_NMIs.values()], '--', color='#C4000D')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs.values()],
-                 y2 = [y for (x,y) in conf_NMIs.values()], color='C0', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs.values()], color='#C4000D', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_ng.values()), '-o', label="RAA no gating")
-ax.plot(alphas, [x for (x,y) in conf_NMIs_ng.values()], '--', color='C1')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_ng.values()], '--', color='C1')
+ax.plot(alphas, list(avgNMIs_ng.values()), '-o', label="RAA no gating", color='#FF5924')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_ng.values()], '--', color='#FF5924')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_ng.values()], '--', color='#FF5924')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_ng.values()],
-                 y2 = [y for (x,y) in conf_NMIs_ng.values()], color='C1', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs_ng.values()], color='#FF5924', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_nr.values()), '-o', label="RAA no random effects")
-ax.plot(alphas, [x for (x,y) in conf_NMIs_nr.values()], '--', color='C2')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_nr.values()], '--', color='C2')
+ax.plot(alphas, list(avgNMIs_nr.values()), '-o', label="RAA no random effects", color='#FFA6BD')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_nr.values()], '--', color='#FFA6BD')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_nr.values()], '--', color='#FFA6BD')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_nr.values()],
-                 y2 = [y for (x,y) in conf_NMIs_nr.values()], color='C2', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs_nr.values()], color='#FFA6BD', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_bare.values()), '-o', label="RAA no gating / random effects")
-ax.plot(alphas, [x for (x,y) in conf_NMIs_bare.values()], '--', color='C3')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_bare.values()], '--', color='C3')
+ax.plot(alphas, list(avgNMIs_bare.values()), '-o', label="RAA no gating / random effects", color='#FF2459')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_bare.values()], '--', color='#FF2459')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_bare.values()], '--', color='#FF2459')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_bare.values()],
-                 y2 = [y for (x,y) in conf_NMIs_bare.values()], color='C3', alpha=0.2)                 
+                 y2 = [y for (x,y) in conf_NMIs_bare.values()], color='#FF2459', alpha=0.2)
 
 ax.set_xlabel(r"$\alpha$: Parameter of the Dirichlet Distribution")
 ax.set_ylabel("NMI")
@@ -302,33 +302,33 @@ for alpha in alphas:
 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(alphas, list(avgNMIs.values()), '-o', label="RAA")
-ax.plot(alphas, [x for (x,y) in conf_NMIs.values()], '--', color='C0')
-ax.plot(alphas, [y for (x,y) in conf_NMIs.values()], '--', color='C0')
+ax.plot(alphas, list(avgNMIs.values()), '-o', label="RAA", color='#C4000D')
+ax.plot(alphas, [x for (x,y) in conf_NMIs.values()], '--', color='#C4000D')
+ax.plot(alphas, [y for (x,y) in conf_NMIs.values()], '--', color='#C4000D')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs.values()],
-                 y2 = [y for (x,y) in conf_NMIs.values()], color='C0', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs.values()], color='#C4000D', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_ng.values()), '-o', label="RAA no gating")
-ax.plot(alphas, [x for (x,y) in conf_NMIs_ng.values()], '--', color='C1')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_ng.values()], '--', color='C1')
+ax.plot(alphas, list(avgNMIs_ng.values()), '-o', label="RAA no gating", color='#FF5924')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_ng.values()], '--', color='#FF5924')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_ng.values()], '--', color='#FF5924')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_ng.values()],
-                 y2 = [y for (x,y) in conf_NMIs_ng.values()], color='C1', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs_ng.values()], color='#FF5924', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_nr.values()), '-o', label="RAA no random effects")
-ax.plot(alphas, [x for (x,y) in conf_NMIs_nr.values()], '--', color='C2')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_nr.values()], '--', color='C2')
+ax.plot(alphas, list(avgNMIs_nr.values()), '-o', label="RAA no random effects", color='#FFA6BD')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_nr.values()], '--', color='#FFA6BD')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_nr.values()], '--', color='#FFA6BD')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_nr.values()],
-                 y2 = [y for (x,y) in conf_NMIs_nr.values()], color='C2', alpha=0.2)
+                 y2 = [y for (x,y) in conf_NMIs_nr.values()], color='#FFA6BD', alpha=0.2)
 
-ax.plot(alphas, list(avgNMIs_bare.values()), '-o', label="RAA no gating / random effects")
-ax.plot(alphas, [x for (x,y) in conf_NMIs_bare.values()], '--', color='C3')
-ax.plot(alphas, [y for (x,y) in conf_NMIs_bare.values()], '--', color='C3')
+ax.plot(alphas, list(avgNMIs_bare.values()), '-o', label="RAA no gating / random effects", color='#FF2459')
+ax.plot(alphas, [x for (x,y) in conf_NMIs_bare.values()], '--', color='#FF2459')
+ax.plot(alphas, [y for (x,y) in conf_NMIs_bare.values()], '--', color='#FF2459')
 ax.fill_between(alphas,
                  y1 = [x for (x,y) in conf_NMIs_bare.values()],
-                 y2 = [y for (x,y) in conf_NMIs_bare.values()], color='C3', alpha=0.2)                 
+                 y2 = [y for (x,y) in conf_NMIs_bare.values()], color='#FF2459', alpha=0.2)
 
 ax.set_xlabel(r"$\alpha$: Parameter of the Dirichlet Distribution")
 ax.set_ylabel("NMI")
