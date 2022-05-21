@@ -37,7 +37,7 @@ def setup_mpl():
     return
 setup_mpl()
 
-iter = 10000
+iter = 10
 avgNMIs = {}
 avgAUCs = {}
 conf_NMIs = {}
@@ -73,14 +73,20 @@ for k in tqdm(num_arc):
                     data=edge_list,
                     link_pred=True)
 
+        model_nmi = DRRAA(k=k,
+                    d=d, 
+                    sample_size=1, #Without random sampling
+                    data=edge_list)
+
         model.train(iterations=iter, LR=0.01)
+        model_nmi.train(iterations=iter, LR=0.01)
         auc_score, fpr, tpr = model.link_prediction()
         AUCs.append(auc_score)
-        Z = F.softmax(model.Z, dim=0)
-        G = F.sigmoid(model.Gate)
+        Z = F.softmax(model_nmi.Z, dim=0)
+        G = F.sigmoid(model_nmi.Gate)
         C = (Z.T * G) / (Z.T * G).sum(0)
 
-        u, sigma, v = torch.svd(model.A) # Decomposition of A.
+        u, sigma, v = torch.svd(model_nmi.A) # Decomposition of A.
         r = torch.matmul(torch.diag(sigma), v.T)
         embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
         archetypes = torch.matmul(r, torch.matmul(Z, C))
@@ -99,13 +105,13 @@ for k in tqdm(num_arc):
 
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI")
+ax.plot(num_arc, list(avgNMIs.values()), '-o', label="mean NMI", c="#C4000D")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_NMIs.values()],
                  y2 = [y for (x,y) in conf_NMIs.values()],
-                 color='tab:blue', alpha=0.2)
+                 color='#C4000D', alpha=0.2)
 
-ax.axvline(true_k, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
+ax.axvline(true_k, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("NMI")
 ax.legend()
@@ -114,22 +120,22 @@ plt.savefig("complex_convex_NMI.png", dpi=500)
 plt.show()
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(num_arc, list(avgAUCs.values()), '-o', label="RAA")
+ax.plot(num_arc, list(avgAUCs.values()), '-o', label="RAA", c="#C4000D")
 ax.fill_between(num_arc,
                  y1 = [x for (x,y) in conf_AUCs.values()],
                  y2 = [y for (x,y) in conf_AUCs.values()],
-                 color='tab:blue', alpha=0.2)
-ax.axvline(8, linestyle = '--', color='r', label="True number of Archetypes", alpha=0.5)
+                 color="#C4000D", alpha=0.2)
+ax.axvline(8, linestyle = '--', color='#000066', label="True number of Archetypes", alpha=0.5)
 
 conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
                         loc=np.mean(Iaucs), 
                         scale=st.sem(Iaucs))
 
-ax.plot(true_k, np.mean(Iaucs),'bo',markersize=5)
+ax.plot(true_k, np.mean(Iaucs),'o',markersize=5, c="#1F3DFF")
 ax.errorbar(true_k, np.mean(Iaucs), 
             [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
             solid_capstyle='projecting', capsize=5,
-            label="ideal predictor", color='b')
+            label="ideal predictor", color='#1F3DFF')
 
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")

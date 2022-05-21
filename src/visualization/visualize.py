@@ -15,7 +15,7 @@ class Visualization():
         pass
 
     def get_embeddings(self):
-        if self.__class__.__name__ == "DRRAA":
+        if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "KAA":
             Z = torch.softmax(self.Z, dim=0)
             G = torch.sigmoid(self.Gate)
             C = (Z.T * G) / (Z.T * G).sum(0)
@@ -29,9 +29,9 @@ class Visualization():
             return self.latent_Z.cpu().detach().numpy(), 0
 
 
-    def plot_latent_and_loss(self, iterations):
+    def plot_latent_and_loss(self, iterations, cmap='red'):
         embeddings, archetypes = self.get_embeddings()
-        if self.__class__.__name__ == "DRRAA":
+        if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "KAA":
             if embeddings.shape[1] == 3:
                 fig = plt.figure()
                 ax = fig.add_subplot(projection='3d')
@@ -43,12 +43,12 @@ class Visualization():
                 #ax.legend()
             else:
                 fig, (ax1, ax2) = plt.subplots(1, 2)
-                ax1.scatter(embeddings[:, 0], embeddings[:, 1], c='red')
+                ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=cmap)
                 ax1.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black')
                 ax1.legend()
                 ax1.set_title(f"Latent space after {iterations} iterations")
                 # Plotting learning curve
-                ax2.plot(self.losses)
+                ax2.plot(self.losses, c="#C4000D")
                 ax2.set_yscale('log') 
                 ax2.set_title("Loss")
             plt.show()
@@ -63,11 +63,11 @@ class Visualization():
                 #ax.legend()
             else:
                 fig, (ax1, ax2) = plt.subplots(1, 2)
-                ax1.scatter(embeddings[:, 0], embeddings[:, 1], c='red')
+                ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=cmap)
                 ax1.legend()
                 ax1.set_title(f"Latent space after {iterations} iterations")
                 # Plotting learning curve
-                ax2.plot(self.losses)
+                ax2.plot(self.losses, c="#00C700")
                 ax2.set_yscale('log') 
                 ax2.set_title("Loss")
             plt.show()

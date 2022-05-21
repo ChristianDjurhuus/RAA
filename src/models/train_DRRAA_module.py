@@ -30,6 +30,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         if self.data_type != "sparse":
             Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
             self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
+            Visualization.__init__(self)
             if link_pred:
                 Link_prediction.__init__(self)
             self.sparse_i_idx = self.edge_list[0]

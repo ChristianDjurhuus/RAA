@@ -18,6 +18,7 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.test_size = test_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         Preprocessing.__init__(self, data=data, data_type='adjacency matrix', device=self.device, data_2 = None)
+        Visualization.__init__(self)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
         if link_pred:
             Link_prediction.__init__(self)

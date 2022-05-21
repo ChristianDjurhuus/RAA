@@ -16,7 +16,7 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.test_size = test_size
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+        Visualization.__init__(self)
         if self.data_type != "sparse":
             Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
             self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
