@@ -71,7 +71,15 @@ for k in archs:
     NMIs.append(NMI)
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.boxplot(NMIs, color='#C4000D')
+c='#C4000D'
+ax.boxplot(NMIs,patch_artist=True,
+           boxprops=dict( facecolor=c,color=c),
+           capprops=dict(color='black'),
+           whiskerprops=dict(color='black'),
+           flierprops=dict(color=c, markeredgecolor=c),
+           medianprops=dict(color='black'),
+           )
+
 ax.set_ylabel("NMI")
 ax.set_xlabel("k: number of archetypes")
 ax.grid(alpha=.3)
