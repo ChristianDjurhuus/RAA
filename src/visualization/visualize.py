@@ -19,10 +19,11 @@ class Visualization():
             Z = torch.softmax(self.Z, dim=0)
             G = torch.sigmoid(self.Gate)
             C = (Z.T * G) / (Z.T * G).sum(0)
-
-            embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
+            u, sigma, v = torch.svd(self.A) # Decomposition of A.
+            r = torch.matmul(torch.diag(sigma), v.T)
+            embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
+            archetypes = torch.matmul(r, torch.matmul(Z, C))
             embeddings = embeddings.cpu().detach().numpy()
-            archetypes = torch.matmul(self.A, torch.matmul(Z, C))
             archetypes = archetypes.cpu().detach().numpy()
             return embeddings, archetypes
 
@@ -36,7 +37,7 @@ class Visualization():
             archetypes = torch.matmul(S, C).cpu().detach().numpy()
             return embeddings, archetypes
 
-    def plot_latent_and_loss(self, iterations, cmap='red'):
+    def plot_latent_and_loss(self, iterations, cmap='red', file_name=None):
         embeddings, archetypes = self.get_embeddings()
         if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "KAA":
             if embeddings.shape[1] == 3:
@@ -47,7 +48,7 @@ class Visualization():
                 ax.scatter(archetypes[0, :], self.archetypes[1, :],
                         self.archetypes[2, :], marker='^', c='black')
             else:
-                fig, (ax1, ax2) = plt.subplots(1, 2)
+                fig, (ax1, ax2) = plt.subplots(1, 2, dpi=500)
                 ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="Set2", label="Node embeddings")
                 ax1.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black', label="Archetypes")
                 # Plotting learning curve
@@ -55,7 +56,10 @@ class Visualization():
                     ax2.plot(self.losses, c="#F2D42E")
                 else:    
                     ax2.plot(self.losses, c="#C4000D")
-            plt.show()
+            if file_name != None:        
+                plt.savefig(file_name, dpi=500)
+            else:
+                plt.show()
 
         if self.__class__.__name__ == "LSM":
             if embeddings.shape[1] == 3:
@@ -64,12 +68,13 @@ class Visualization():
                 ax.scatter(embeddings[:, 0], embeddings[:, 1],
                         embeddings[:, 2], c='red')
             else:
-                fig, (ax1, ax2) = plt.subplots(1, 2)
+                fig, (ax1, ax2) = plt.subplots(1, 2, dpi=500)
                 ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="Set2", label="Node embeddings")
                 ax1.legend()
                 # Plotting learning curve
                 ax2.plot(self.losses, c="#00C700")
-            plt.show()
+            plt.savefig(file_name, dpi=500)
+            #plt.show()
 
 
     def embedding_density(self):

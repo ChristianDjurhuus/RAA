@@ -6,6 +6,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
 import networkx as nx
 import archetypes
@@ -168,7 +169,10 @@ class Link_prediction():
 
     def get_labels(self, attribute):
         # This only works with a gml file
-        graph = nx.read_gml(self.data)
+        if self.data_type == "gml":
+            graph = nx.read_gml(self.data)
+        if self.data_type == "networkx":
+            graph = self.data
         return list(nx.get_node_attributes(graph, attribute).values())
 
     #def get_embeddings(self):
@@ -185,16 +189,18 @@ class Link_prediction():
     #    if self.__class__.__name__ == "LSM":
     #        return self.latent_Z.cpu().detach().numpy(), 0
 
-    def KNeighborsClassifier(self, attribute):
+    def KNeighborsClassifier(self, attribute, gml=False):
         if self.labels == "":
             self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
-        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-        knn = KNeighborsClassifier(n_neighbors=10).fit(train_X, train_y)
-        return knn.score(test_X, test_y)
+        #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
+        knn = KNeighborsClassifier(n_neighbors=10)
+        #return knn.score(test_X, test_y)
+        cv_scores = cross_val_score(knn, X, y, cv=5)
+        return np.mean(cv_scores), np.std(cv_scores)
 
     def k_means(self, attribute, n_clusters):
         if self.labels == "":
@@ -213,6 +219,7 @@ class Link_prediction():
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
-        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-        reg = LogisticRegression(solver="saga", max_iter=1000, random_state=42).fit(train_X, train_y)
-        return reg.score(test_X, test_y)
+        #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
+        reg = LogisticRegression(solver="saga", max_iter=1000, random_state=42)
+        cv_scores = cross_val_score(reg, X, y, cv=5)
+        return np.mean(cv_scores), np.std(cv_scores)
