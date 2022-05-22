@@ -8,19 +8,13 @@ blogs, dolphin and karate.
 from src.models.train_DRRAA_module import DRRAA
 from src.models.train_LSM_module import LSM
 import torch
-import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
-import json
 import scipy.stats as st
-import matplotlib as mpl 
-def setup_mpl():
-    mpl.rcParams['font.family'] = 'Times New Roman'
-    return
-setup_mpl()
+
 
 # Training iteration
-iterations = 10
+iterations = 10000
 d = 2 # Set dim for DRRAA
 LSM_losses = []
 n_archetypes = torch.arange(2,12)

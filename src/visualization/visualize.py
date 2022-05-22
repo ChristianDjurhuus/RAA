@@ -118,8 +118,6 @@ class Visualization():
         # Plot the data and the classification with the decision boundary.
         xmin, xmax = X[:, 0].min(), X[:, 0].max()
         ymin, ymax = X[:, 1].min(), X[:, 1].max()
-        print((xmin, xmax))
-        print((ymin, ymax))
         xd = np.array([xmin, xmax])
         yd = m * xd + c
         fig, ax = plt.subplots(dpi = 100)
@@ -162,7 +160,7 @@ class Visualization():
 
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
-        fig, ax = plt.subplots(dpi = 100)
+        fig, ax = plt.subplots(dpi = 200)
         ax.pcolormesh(xx, yy, Z, cmap=cmap_light)
 
         # Plot also the training points
@@ -170,7 +168,7 @@ class Visualization():
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
         ax.set_title("Desicion boundary - KNN")
-        fig.savefig("Desicion_boundary_KNN.pdf")
+        fig.savefig("Desicion_boundary_KNN.png",dpi=200)
         plt.show()
 
         return knn.score(test_X, test_y)

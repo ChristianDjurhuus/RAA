@@ -132,28 +132,6 @@ class Link_prediction():
             return target, idx_i_test, idx_j_test
         return target, idx_i_test, idx_j_test
 
-    def KAA_test_train(self):
-        '''We can re-write the last line by (s_i - s_j)^t C^tX^tXC (s_i - s_j)
-         so if we construct a tensor storing S=(s_i - s_j) for all (i,j) pairs,
-         it can be written by (CS)^tX^tX(CS) and the term, X^tX, can be replaced by any kernel function K(x, x).'''
-        X_shape = self.data.shape
-        num_samples = round(self.test_size * self.N)
-        idx_i_test = torch.multinomial(input=torch.arange(0, float(X_shape[0])),
-                                       num_samples=num_samples,
-                                       replacement=True)
-        idx_j_test = torch.tensor(torch.zeros(num_samples)).long()
-        for i in range(len(idx_i_test)):
-            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(X_shape[1]))[
-                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(X_shape[1])),
-                                  num_samples=1,
-                                  replacement=True).item()].item()  # Temp solution to sample from upper corner
-        X_test = self.data.detach().clone()
-        X_test[:] = 0
-        X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
-        self.data[idx_i_test, idx_j_test] = 0
-        target = X_test[idx_i_test, idx_j_test]  # N
-        return target, idx_i_test, idx_j_test, X_test
-
     def plot_auc(self):
         auc_score, fpr, tpr = self.link_prediction()
         plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % auc_score)

@@ -7,11 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import json
 import scipy.stats as st
-import matplotlib as mpl 
-def setup_mpl():
-    mpl.rcParams['font.family'] = 'Times New Roman'
-    return
-setup_mpl()
+import matplotlib as mpl
 
 datasets = ["cora", "facebook"]
 n_archetypes = torch.arange(2,12)
