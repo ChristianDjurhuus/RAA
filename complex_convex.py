@@ -27,14 +27,9 @@ from src.models.calcNMI import calcNMI
 import matplotlib as mpl
 import scipy.stats as st
 
-seed = 42
+seed = 100
 torch.random.manual_seed(seed)
 np.random.seed(seed)
-
-def setup_mpl():
-    mpl.rcParams['font.family'] = 'Times New Roman'
-    return
-setup_mpl()
 
 iter = 10000
 avgNMIs = {}
@@ -43,8 +38,8 @@ conf_NMIs = {}
 conf_AUCs = {}
 #Get synthetic data and convert to edge list
 true_k = 8
-true_alpha = 0.2
-adj_m, z, A, Z_true, beta = main(alpha=true_alpha, k=true_k, dim=2, nsamples=100, rand=False) #z is cmap
+true_alpha = 0.05
+adj_m, z, A, Z_true, beta, partition_cmap = main(alpha=true_alpha, k=true_k, dim=2, nsamples=1000, rand=False) #z is cmap
 G = nx.from_numpy_matrix(adj_m.numpy())
 temp = [x for x in nx.generate_edgelist(G, data=False)]
 edge_list = np.zeros((2, len(temp)))
@@ -68,16 +63,16 @@ for k in num_arc:
     for i in range(num_init):
         model = DRRAA(k=k,
                     d=d, 
-                    sample_size=1, #Without random sampling
+                    sample_size=.5, #Without random sampling
                     data=edge_list,
                     link_pred=True)
 
         model_nmi = DRRAA(k=k,
                     d=d, 
-                    sample_size=1, #Without random sampling
+                    sample_size=.5, #Without random sampling
                     data=edge_list)
 
-        model.train(iterations=iter, LR=0.01)
+        model.train(iterations=iter, LR=0.01, print_loss=True)
         model_nmi.train(iterations=iter, LR=0.01)
         auc_score, fpr, tpr = model.link_prediction()
         AUCs.append(auc_score)
