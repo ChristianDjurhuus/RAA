@@ -158,44 +158,50 @@ def main(alpha, k, dim, nsamples, rand):
         mask_adj[delete_Z,:] = False
         adj_m = adj_m[mask_adj].reshape(adj_m.shape[0] - len(delete_Z),adj_m.shape[1] - len(delete_Z))
 
+        synth_data = torch.matmul(A, Z).T
     
     #label_map = {x: i for i, x in enumerate(G.nodes)}
     #G = nx.relabel_nodes(G, label_map)
 
 
-
-
+    #Louvain partition
+    partition = get_clusters(adj_m)
 
     #Calculating density
     xy = np.vstack((synth_data[:,0].numpy(), synth_data[:,1].numpy()))
     z = gaussian_kde(xy)(xy)
-    #mpl.rcParams['font.family'] = 'Times New Roman'
-    #if dim == 3:
-    #    fig = plt.figure(dpi=100)
-    #    ax = fig.add_subplot(projection='3d')
-    #    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap='viridis')
-    #    ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
-    #    ax.set_title(f"True Latent Space (alpha={alpha})")
-    #    fig.colorbar(sc, label="Density")
-    #else:
-    #    fig, ax = plt.subplots(dpi=100)
-    #    sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap='viridis')
-    #    ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
-    #    ax.set_title(f"True Latent Space (alpha={alpha})")
-    #    fig.colorbar(sc, label="Density")
-    #ax.legend()
+    mpl.rcParams['font.family'] = 'Times New Roman'
+    if dim == 3:
+        fig = plt.figure(dpi=500)
+        ax = fig.add_subplot(projection='3d')
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap='viridis')
+        ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
+        ax.set_title(f"True Latent Space (alpha={alpha})")
+        fig.colorbar(sc, label="Density")
+    else:
+        fig, ax = plt.subplots(dpi=500)
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap='viridis')
+        #ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='Set2')
+        ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
+        #ax.set_title(f"True Latent Space (alpha={alpha})")
+        fig.colorbar(sc, label="Density")
+    ax.legend()
+    plt.savefig(f'true_latent_space_{k}.png',dpi=500)
     #plt.show()
-    #plt.savefig(f'true_latent_space_{alpha}.png')
 
-    #plt.figure(dpi=100)
-    #plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
+    plt.figure(dpi=500)
+    plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
     #plt.title(f"Adjacency matrix ({alpha})")
-    #plt.savefig(f'synt_adjacency_{alpha}.png')
+    plt.savefig(f'synt_adjacency_{alpha}.png', dpi=500)
     #plt.show()
 
-    #Get louvain partitions
-    partition = get_clusters(adj_m)
-    #partition_cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
+    fig, ax = plt.subplots(dpi=500)
+    ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='Set2')
+    ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
+    #ax.set_title(f"True_latent_space_louvain.png", dpi=500)
+    plt.savefig(f"True_latent_space_louvain_{k}.png", dpi=500)
+    #plt.show()
+
     return adj_m, z, A, Z, beta, partition
 
     

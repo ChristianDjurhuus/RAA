@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import seaborn as sns
 import numpy as np
 from torch_sparse import spspmm
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 # import modules
 from src.visualization.visualize import Visualization
@@ -120,15 +122,50 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
 
-    def train(self, iterations, LR = 0.01, print_loss = False):
+    def train(self, iterations, LR = 0.01, patience=False, print_loss = False):
         optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
 
-        for _ in range(iterations):
-            loss = - self.log_likelihood() / self.N
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            self.losses.append(loss.item())
-            if print_loss:
-                print('Loss at the',_,'iteration:',loss.item())
-    
+        if not patience:
+            for _ in range(iterations):
+                loss = - self.log_likelihood() / self.N
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                self.losses.append(loss.item())
+                if print_loss:
+                    print('Loss at the',_,'iteration:',loss.item())
+        else:
+            for iter in range(iterations):
+                if iter == 0:
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)
+                    u, sigma, v = torch.svd(self.A) # Decomposition of A.
+                    r = torch.matmul(torch.diag(sigma), v.T)
+                    last_embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
+                    last_embeddings = last_embeddings.detach().numpy()
+                loss = - self.log_likelihood() / self.N
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                self.losses.append(loss.item())
+                if print_loss:
+                    print('Loss at the',iter,'iteration:',loss.item())
+                if iter % 10000 == 0 and iter != 0:
+                    # Early stopping based on cosine similarity between current and previous embeddings
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)
+                    u, sigma, v = torch.svd(self.A) # Decomposition of A.
+                    r = torch.matmul(torch.diag(sigma), v.T)
+                    embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
+                    embeddings = embeddings.detach().numpy()
+                    cosine_matrix = cosine_similarity(last_embeddings, embeddings)
+                    cosine_between_iter = np.diagonal(cosine_matrix)
+                    mu_cosine_similarity = np.mean(cosine_between_iter)
+                    last_embeddings = embeddings
+                    if mu_cosine_similarity > patience:
+                        print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
+                        break
+
+        
