@@ -9,6 +9,7 @@ from sklearn import metrics
 import networkx as nx
 import community as community_louvain
 import matplotlib.cm as cm
+import matplotlib.colors as colors
 
 ####################
 ## Synthetic data ##
@@ -132,6 +133,19 @@ def get_clusters(adj_m):
     partition = community_louvain.best_partition(G)
     return partition
 
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=100):
+    '''
+    This function takes part of a matplotlib colormap and uses it. (we didnt like too white values)
+    thanks to: https://stackoverflow.com/questions/18926031/how-to-extract-a-subset-of-a-colormap-as-a-new-colormap-in-matplotlib
+    '''
+    new_cmap = colors.LinearSegmentedColormap.from_list(
+        'trunc({n},{a:.2f},{b:.2f})'.format(n=cmap.name, a=minval, b=maxval),
+        cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
+
+arr = np.linspace(0, 50, 100).reshape((10, 10))
+fig, ax = plt.subplots(ncols=2)
+
 def main(alpha, k, dim, nsamples, rand):
     synth_data, A, Z = synthetic_data(k, dim, alpha, nsamples)
     adj_m, beta = generate_network_bias(A, Z, k, dim, nsamples, rand)
@@ -171,22 +185,24 @@ def main(alpha, k, dim, nsamples, rand):
     xy = np.vstack((synth_data[:,0].numpy(), synth_data[:,1].numpy()))
     z = gaussian_kde(xy)(xy)
     mpl.rcParams['font.family'] = 'Times New Roman'
+    cmap = plt.get_cmap('RdPu')
+    cmap = truncate_colormap(cmap, 0.2, 1)
     if dim == 3:
         fig = plt.figure(dpi=500)
         ax = fig.add_subplot(projection='3d')
-        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap='viridis')
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap=cmap)
         ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
         ax.set_title(f"True Latent Space (alpha={alpha})")
         fig.colorbar(sc, label="Density")
     else:
         fig, ax = plt.subplots(dpi=500)
-        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap='viridis')
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap=cmap)
         #ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='Set2')
         ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
         #ax.set_title(f"True Latent Space (alpha={alpha})")
         fig.colorbar(sc, label="Density")
     ax.legend()
-    plt.savefig(f'true_latent_space_{k}.png',dpi=500)
+    plt.savefig(f'true_latent_space_{alpha}.png',dpi=500)
     #plt.show()
 
     plt.figure(dpi=500)
@@ -196,10 +212,10 @@ def main(alpha, k, dim, nsamples, rand):
     #plt.show()
 
     fig, ax = plt.subplots(dpi=500)
-    ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='Set2')
+    ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='tab10')
     ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
     #ax.set_title(f"True_latent_space_louvain.png", dpi=500)
-    plt.savefig(f"True_latent_space_louvain_{k}.png", dpi=500)
+    plt.savefig(f"True_latent_space_louvain_{alpha}.png", dpi=500)
     #plt.show()
 
     return adj_m, z, A, Z, beta, partition
