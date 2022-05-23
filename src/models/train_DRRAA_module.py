@@ -16,10 +16,10 @@ from src.features.preprocessing import Preprocessing
 class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None):
         # TODO Skal finde en måde at loade data ind på. CHECK
-        # TODO Skal sørge for at alle classes for de parametre de skal bruge. CHECK
+        # TODO Skal sørge for at alle classes får de parametre de skal bruge. CHECK
         # TODO Skal ha indført en train funktion/class. CHECK
         # TODO SKal ha udvides visualiseringskoden. CHECK
-        # TODO Skal ha lavet performancec check ()
+        # TODO Skal ha lavet performance check ()
         # TODO Skal vi lave en sampling_weights med andet end 1 taller?
 
         super(DRRAA, self).__init__()
@@ -32,7 +32,6 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         if self.data_type != "sparse":
             Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
             self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
-            Visualization.__init__(self)
             if link_pred:
                 Link_prediction.__init__(self)
             self.sparse_i_idx = self.edge_list[0]
@@ -52,10 +51,9 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
             self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
             self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
-
             self.N = int(self.sparse_j_idx.max() + 1)
-            
-
+        
+        Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
         self.k = k
@@ -149,9 +147,9 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                     u, sigma, v = torch.svd(self.A) # Decomposition of A.
                     r = torch.matmul(torch.diag(sigma), v.T)
                     last_embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
-                    last_embeddings = last_embeddings.detach().numpy()
+                    last_embeddings = last_embeddings.cpu().detach().numpy()
                     last_archetypes =  torch.matmul(r, torch.matmul(Z, C))
-                    last_archetypes = last_archetypes.detach().numpy()
+                    last_archetypes = last_archetypes.cpu().detach().numpy()
                 loss = - self.log_likelihood() / self.N
                 optimizer.zero_grad()
                 loss.backward()
@@ -169,8 +167,8 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                     r = torch.matmul(torch.diag(sigma), v.T)
                     embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
                     archetypes = torch.matmul(r, torch.matmul(Z, C))
-                    embeddings = embeddings.detach().numpy()
-                    archetypes = archetypes.detach().numpy()
+                    embeddings = embeddings.cpu().detach().numpy()
+                    archetypes = archetypes.cpu().detach().numpy()
                     cosine_matrix = cosine_similarity(last_embeddings, embeddings)
                     cosine_between_iter = np.diagonal(cosine_matrix)
                     cosine_matrix2 = cosine_similarity(last_archetypes, archetypes)

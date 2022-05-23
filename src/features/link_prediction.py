@@ -64,6 +64,9 @@ class Link_prediction():
                     theta = -z_dist  # (test_size)
             
             if self.data_type == "sparse":
+                #Create target
+                self.target = torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
+
                 if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
                     Z = torch.softmax(self.Z, dim=0)
                     G = torch.sigmoid(self.Gate)

@@ -54,6 +54,7 @@ class Visualization():
                 # Plotting learning curve
                 '''if self.__class__.__name__ == "KAA":
                     ax2.plot(self.losses, c="#F2D42E")
+                    ax2.set_yscale("log")
                 else:    
                     ax2.plot(self.losses, c="#C4000D")'''
             if file_name != None:        
@@ -69,10 +70,14 @@ class Visualization():
                         embeddings[:, 2], c='red')
             else:
                 fig, (ax1, ax2) = plt.subplots(1, 2, dpi=500)
-                ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="Set2", label="Node embeddings")
+                if type(cmap) == dict:
+                    ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="Set2", label="Node embeddings")
+                else:
+                    ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=cmap, cmap="Set2", label="Node embeddings")
                 ax1.legend()
                 # Plotting learning curve
                 ax2.plot(self.losses, c="#00C700")
+                ax2.set_yscale("log")
             plt.savefig(file_name, dpi=500)
             #plt.show()
 
