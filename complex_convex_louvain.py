@@ -26,15 +26,23 @@ for i in range(len(temp)):
 
 
 NMIs = []
-for iter in [100000]:#[75000, 100000]:#[10000, 20000, 30000, 40000, 50000, 75000, 100000]:
+AUCs = []
+for iter in [10000, 20000, 30000, 40000, 50000]:#[50000,60000,100000]:#[75000, 100000]:#[10000, 20000, 30000, 40000, 50000, 75000, 100000]:
     raa = DRRAA(k=8,
                 d=2, 
                 sample_size=.5,
                 data=edge_list,
                 link_pred=False)
+    raa2 = DRRAA(k=8,
+            d=2, 
+            sample_size=.5,
+            data=edge_list,
+            link_pred=True)
 
-    raa.train(iterations=iter, LR=0.01, print_loss=True, patience=0.95)
-    raa.plot_latent_and_loss(iterations=iter, cmap=partition_cmap, file_name="embedding_and_loss_complex_patience.png")
+    raa.train(iterations=iter, LR=0.15, print_loss=False, scheduling=True, early_stopping=0.8)
+    raa2.train(iterations=iter, LR=0.15, print_loss=False, scheduling=True, early_stopping=0.8)
+    auc, _, _ = raa2.link_prediction()
+    raa.plot_latent_and_loss(iterations=iter, cmap=partition_cmap, file_name=f"embedding_and_loss_complex_patience_{iter}.png")
     Z = F.softmax(raa.Z, dim=0)
     G = F.sigmoid(raa.Gate)
     C = (Z.T * G) / (Z.T * G).sum(0)
@@ -46,5 +54,7 @@ for iter in [100000]:#[75000, 100000]:#[10000, 20000, 30000, 40000, 50000, 75000
     #Calculate NMI between embeddings
     print(f'The NMI between z and z_hat is {calcNMI(Z, Z_true)}')
     NMIs.append((iter, calcNMI(Z, Z_true)))
+    AUCs.append((iter, auc))
 print(NMIs)
+print(AUCs)
 

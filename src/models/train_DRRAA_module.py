@@ -122,10 +122,16 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
 
-    def train(self, iterations, LR = 0.01, patience=False, print_loss = False):
+    def train(self, iterations, LR = 0.01, early_stopping=None, print_loss = False, scheduling = False):
         optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
-
-        if not patience:
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode='max',
+            factor=0.9,
+            patience=1,
+            verbose=True
+        )
+        if not scheduling:
             for _ in range(iterations):
                 loss = - self.log_likelihood() / self.N
                 optimizer.zero_grad()
@@ -144,6 +150,8 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                     r = torch.matmul(torch.diag(sigma), v.T)
                     last_embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
                     last_embeddings = last_embeddings.detach().numpy()
+                    last_archetypes =  torch.matmul(r, torch.matmul(Z, C))
+                    last_archetypes = last_archetypes.detach().numpy()
                 loss = - self.log_likelihood() / self.N
                 optimizer.zero_grad()
                 loss.backward()
@@ -151,21 +159,30 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                 self.losses.append(loss.item())
                 if print_loss:
                     print('Loss at the',iter,'iteration:',loss.item())
-                if iter % 10000 == 0 and iter != 0:
-                    # Early stopping based on cosine similarity between current and previous embeddings
+                if iter % 1000 == 0 and iter != 0:
+                    print('Loss at the',iter,'iteration:',loss.item())
+                    # Learning rate scheduler based on cosine similarity
                     Z = torch.softmax(self.Z, dim=0)
                     G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0)
                     u, sigma, v = torch.svd(self.A) # Decomposition of A.
                     r = torch.matmul(torch.diag(sigma), v.T)
                     embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
+                    archetypes = torch.matmul(r, torch.matmul(Z, C))
                     embeddings = embeddings.detach().numpy()
+                    archetypes = archetypes.detach().numpy()
                     cosine_matrix = cosine_similarity(last_embeddings, embeddings)
                     cosine_between_iter = np.diagonal(cosine_matrix)
-                    mu_cosine_similarity = np.mean(cosine_between_iter)
+                    cosine_matrix2 = cosine_similarity(last_archetypes, archetypes)
+                    cosine_between_iter_2 = np.diagonal(cosine_matrix2)
+                    mu_cosine_similarity = (np.mean(cosine_between_iter) + np.mean(cosine_between_iter_2)) /2
+                    scheduler.step(mu_cosine_similarity)
                     last_embeddings = embeddings
-                    if mu_cosine_similarity > patience:
-                        print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
-                        break
+                    print(mu_cosine_similarity)
+                    if early_stopping != None:
+                        if mu_cosine_similarity > early_stopping:
+                            print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
+                            break
+
 
         
