@@ -39,10 +39,7 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
             self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
             self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
-
             self.N = int(self.sparse_j_idx.max() + 1)
-
-
 
         self.input_size = (self.N, self.N)
         self.latent_dim = d
@@ -59,7 +56,6 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
 
         # list for training loss
         self.losses = []
-
 
     def sample_network(self):
         # USE torch_sparse lib i.e. : from torch_sparse import spspmm
