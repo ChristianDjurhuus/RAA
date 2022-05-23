@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
+from scipy import stats
 import networkx as nx
 import archetypes
 
@@ -191,18 +192,17 @@ class Link_prediction():
             graph = self.data
         return list(nx.get_node_attributes(graph, attribute).values())
 
-    def KNeighborsClassifier(self, attribute, gml=False):
+    def KNeighborsClassifier(self, attribute, n_neighbours = 10, gml=False):
         if self.labels == "":
             self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
-        #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-        knn = KNeighborsClassifier(n_neighbors=10)
-        #return knn.score(test_X, test_y)
+        knn = KNeighborsClassifier(n_neighbors=n_neighbours)
         cv_scores = cross_val_score(knn, X, y, cv=5)
-        return np.mean(cv_scores), np.std(cv_scores)
+        conf_int = stats.norm.interval(0.95, loc=np.mean(cv_scores), scale=np.std(cv_scores) / np.sqrt(len(cv_scores)))
+        return np.mean(cv_scores), conf_int, np.std(cv_scores)
 
     def k_means(self, attribute, n_clusters):
         if self.labels == "":

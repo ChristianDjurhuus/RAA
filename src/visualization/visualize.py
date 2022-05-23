@@ -48,14 +48,14 @@ class Visualization():
                 ax.scatter(archetypes[0, :], self.archetypes[1, :],
                         self.archetypes[2, :], marker='^', c='black')
             else:
-                fig, (ax1, ax2) = plt.subplots(1, 2, dpi=500)
-                ax1.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="Set2", label="Node embeddings")
-                ax1.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black', label="Archetypes")
+                fig = plt.subplots(dpi=500)
+                plt.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="tab10", label="Node embeddings")
+                plt.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black', label="Archetypes")
                 # Plotting learning curve
-                if self.__class__.__name__ == "KAA":
+                '''if self.__class__.__name__ == "KAA":
                     ax2.plot(self.losses, c="#F2D42E")
                 else:    
-                    ax2.plot(self.losses, c="#C4000D")
+                    ax2.plot(self.losses, c="#C4000D")'''
             if file_name != None:        
                 plt.savefig(file_name, dpi=500)
             else:
@@ -120,7 +120,7 @@ class Visualization():
         ymin, ymax = X[:, 1].min(), X[:, 1].max()
         xd = np.array([xmin, xmax])
         yd = m * xd + c
-        fig, ax = plt.subplots(dpi = 100)
+        fig, ax = plt.subplots(dpi = 500)
         ax.set_xlim(left = xmin, right = xmax)
         ax.set_ylim(bottom = ymin, top = ymax)
         ax.plot(xd, yd, 'k', lw = 1, ls = '--')
@@ -131,25 +131,28 @@ class Visualization():
         ax.set_ylabel(r'$x_2$', fontsize = "medium")
         ax.set_xlabel(r'$x_1$', fontsize = "medium")
         ax.set_title("Decision Boundary - LR", fontsize = "large")
-        fig.savefig("Desicion_boundary_LR.pdf")
-        plt.show()
+        fig.savefig("Desicion_boundary_LR.png")
+        #plt.show()
 
         return reg.score(test_X, test_y)
 
-    def decision_boundary_knn(self, attribute, n_neighbors = 10): #TODO test if this works
+    def decision_boundary_knn(self, attribute, n_neighbors = 10, filename=False): #TODO test if this works
         # https://stackoverflow.com/questions/45075638/graph-k-nn-decision-boundaries-in-matplotlib
         self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
-        X, _ = self.get_embeddings()
+        X, archetypes = self.get_embeddings()
+        #X = X+self.beta.unsqueeze(1).detach().numpy()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels) # label encoding
-        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42)
+        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size = 0.2, random_state = 42, stratify=y)
         knn = KNeighborsClassifier(n_neighbors = n_neighbors).fit(train_X, train_y)
 
         h = .02  # step size in the mesh
         # Create color maps
-        cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
-        cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+
+
+        cmap_light = ListedColormap(['#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'])
+        cmap_bold = ListedColormap(['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
 
         # Plot the decision boundary. For that, we will assign a color to each
         # point in the mesh [x_min, x_max]x[y_min, y_max].
@@ -160,16 +163,19 @@ class Visualization():
 
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
-        fig, ax = plt.subplots(dpi = 200)
+        fig, ax = plt.subplots(dpi = 500)
         ax.pcolormesh(xx, yy, Z, cmap=cmap_light)
 
         # Plot also the training points
         ax.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
+        ax.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black', label="Archetypes")
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
-        ax.set_title("Desicion boundary - KNN")
-        fig.savefig("Desicion_boundary_KNN.png",dpi=200)
-        plt.show()
+        if not filename:
+            fig.savefig("Desicion_boundary_KNN.png",dpi=500)
+        else:
+            fig.savefig(filename, dpi=500)
+        #plt.show()
 
         return knn.score(test_X, test_y)
 
