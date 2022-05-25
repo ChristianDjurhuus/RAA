@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
+from scipy import stats
 import networkx as nx
 import archetypes
 
@@ -20,45 +21,86 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        while (True not in self.target or False not in self.target):
-            self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
+        if self.data_type != "sparse":
+            while (True not in self.target or False not in self.target):
+                self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
 
     def link_prediction(self):
         with torch.no_grad():
-            if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
-                Z = torch.softmax(self.Z, dim=0)
-                G = torch.sigmoid(self.Gate)
-                C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
+            if self.data_type != "sparse":
+                if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
 
-                M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
-                                                        Z[:, self.idx_i_test])).T  # Size of test set e.g. K x N
-                M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
-                z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-                theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)  # (test_size)
-            if self.__class__.__name__ == "LSM":
-                z_pdist_test = ((self.latent_Z[self.idx_i_test, :] - self.latent_Z[self.idx_j_test,
-                                                                     :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-                theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (Sample_size)
-            if self.__class__.__name__ == 'LSMAA':
-                # Do the AA on the lsm embeddings
-                aa = archetypes.AA(n_archetypes=self.k)
-                lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
-                latent_Z = torch.from_numpy(lsm_z).float()
-                z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
-                    -1) ** 0.5  # N x N
-                theta = self.beta - z_pdist_test  # (test_size)
-            if self.__class__.__name__ == "KAA":
-                S = torch.softmax(self.S, dim=0)
-                C = torch.softmax(self.C, dim=0)
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
+                                                            Z[:, self.idx_i_test])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)  # (test_size)
+                if self.__class__.__name__ == "LSM":
+                    z_pdist_test = ((self.latent_Z[self.idx_i_test, :] - self.latent_Z[self.idx_j_test,
+                                                                        :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (Sample_size)
+                if self.__class__.__name__ == 'LSMAA':
+                    # Do the AA on the lsm embeddings
+                    aa = archetypes.AA(n_archetypes=self.k)
+                    lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = torch.from_numpy(lsm_z).float()
+                    z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
+                        -1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (test_size)
+                if self.__class__.__name__ == "KAA":
+                    S = torch.softmax(self.S, dim=0)
+                    C = torch.softmax(self.C, dim=0)
 
-                CtKC = C.T @ self.kernel(self.X_test,
-                                         type=self.type) @ C
-                z_dist = torch.zeros(len(self.idx_i_test))
-                for i in range(len(self.idx_i_test)):
-                    z_dist[i] = (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_i_test[i]]
-                                 + S[:, self.idx_j_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]]
-                                 - 2 * (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]])) + 1e-06
-                theta = -z_dist  # (test_size)
+                    CtKC = C.T @ self.kernel(self.X_test,
+                                            type=self.type) @ C
+                    z_dist = torch.zeros(len(self.idx_i_test))
+                    for i in range(len(self.idx_i_test)):
+                        z_dist[i] = (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_i_test[i]]
+                                    + S[:, self.idx_j_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]]
+                                    - 2 * (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]])) + 1e-06
+                    theta = -z_dist  # (test_size)
+            
+            if self.data_type == "sparse":
+                #Create target
+                self.target = torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
+
+                if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
+                                                            Z[:, self.removed_i])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test)  # (test_size)
+                if self.__class__.__name__ == "LSM":
+                    z_pdist_test = ((self.latent_Z[self.removed_i, :] - self.latent_Z[self.removed_j,
+                                                                        :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test  # (Sample_size)
+                if self.__class__.__name__ == 'LSMAA':
+                    # Do the AA on the lsm embeddings
+                    aa = archetypes.AA(n_archetypes=self.k)
+                    lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = torch.from_numpy(lsm_z).float()
+                    z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
+                        -1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (test_size)
+                if self.__class__.__name__ == "KAA":
+                    S = torch.softmax(self.S, dim=0)
+                    C = torch.softmax(self.C, dim=0)
+
+                    CtKC = C.T @ self.kernel(self.X_test,
+                                            type=self.type) @ C
+                    z_dist = torch.zeros(len(self.removed_i))
+                    for i in range(len(self.removed_i)):
+                        z_dist[i] = (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_i[i]]
+                                    + S[:, self.removed_j[i]].T @ CtKC @ S[:, self.removed_j[i]]
+                                    - 2 * (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_j[i]])) + 1e-06
+                    theta = -z_dist  # (test_size)
 
             rate = torch.exp(theta)  # N
 
@@ -153,32 +195,17 @@ class Link_prediction():
             graph = self.data
         return list(nx.get_node_attributes(graph, attribute).values())
 
-    #def get_embeddings(self):
-    #    if self.__class__.__name__ == "DRRAA":
-    #        Z = torch.softmax(self.Z, dim=0)
-    #        G = torch.sigmoid(self.Gate)
-    #        C = (Z.T * G) / (Z.T * G).sum(0)
-
-    #        embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
-    #        embeddings = embeddings.cpu().detach().numpy()
-    #        archetypes = torch.matmul(self.A, torch.matmul(Z, C))
-    #        archetypes = archetypes.cpu().detach().numpy()
-    #        return embeddings, archetypes
-    #    if self.__class__.__name__ == "LSM":
-    #        return self.latent_Z.cpu().detach().numpy(), 0
-
-    def KNeighborsClassifier(self, attribute, gml=False):
+    def KNeighborsClassifier(self, attribute, n_neighbours = 10, gml=False):
         if self.labels == "":
             self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
-        #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-        knn = KNeighborsClassifier(n_neighbors=10)
-        #return knn.score(test_X, test_y)
+        knn = KNeighborsClassifier(n_neighbors=n_neighbours)
         cv_scores = cross_val_score(knn, X, y, cv=5)
-        return np.mean(cv_scores), np.std(cv_scores)
+        conf_int = stats.norm.interval(0.95, loc=np.mean(cv_scores), scale=np.std(cv_scores) / np.sqrt(len(cv_scores)))
+        return np.mean(cv_scores), conf_int, np.std(cv_scores)
 
     def k_means(self, attribute, n_clusters):
         if self.labels == "":
