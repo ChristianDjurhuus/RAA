@@ -9,10 +9,26 @@ from sklearn import metrics
 import networkx as nx
 import community as community_louvain
 import matplotlib.cm as cm
+import random
 
 ####################
 ## Synthetic data ##
 ####################
+
+def random_points():
+    '''
+    Randomly drawing points from the circumference
+    '''
+    #center
+    center_x = 0
+    center_y = 0
+    #Radius
+    r = 10
+    angle = (np.random.random())*2*np.pi #np.cos and sin assumes radians not degrees
+    #angle = random.random()*2*np.pi
+    return np.array([center_x + np.cos(angle) * r, center_y + np.sin(angle)* r])
+
+
 
 def synthetic_data(k, dim, alpha, nsamples):
     '''
@@ -29,8 +45,8 @@ def synthetic_data(k, dim, alpha, nsamples):
     #    [18.,  6., 12.],
     #    [14.,  7., 16.]])
     for i in range(k):
-        A[:,i] = np.random.randint(20, size=dim).reshape(dim,)
-    
+        A[:,i] = random_points() #np.random.randint(20, size=dim).reshape(dim,)
+
     
     Z = np.zeros((k, nsamples))
     for i in range(nsamples):
@@ -120,10 +136,11 @@ def ideal_prediction(adj_m, A, Z, beta, test_size = 0.5):
         M_i = torch.matmul(A, Z[:, idx_i_test]).T
         M_j = torch.matmul(A, Z[:, idx_j_test]).T
         z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5
-        theta = (beta[idx_i_test] + beta[idx_j_test] - z_pdist_test)
-        rate = torch.exp(theta)
-        fpr, tpr, threshold = metrics.roc_curve(value_test, rate.cpu().data.numpy())
-        auc_score = metrics.roc_auc_score(value_test, rate.cpu().data.numpy())
+        theta = beta[idx_i_test] + beta[idx_j_test] - z_pdist_test
+        #rate = torch.exp(theta)
+        prob = logit2prob(theta)
+        fpr, tpr, threshold = metrics.roc_curve(value_test, prob.cpu().data.numpy())
+        auc_score = metrics.roc_auc_score(value_test, prob.cpu().data.numpy())
         return auc_score, fpr, tpr
 
 
@@ -131,6 +148,9 @@ def get_clusters(adj_m):
     G = nx.from_numpy_matrix(adj_m.numpy())
     partition = community_louvain.best_partition(G)
     return partition
+
+def get_sparsity(adj_m):
+    return 0.5 * (sum(sum(adj_m)/(adj_m.shape[0]*(adj_m.shape[0]-1))))    
 
 def main(alpha, k, dim, nsamples, rand):
     synth_data, A, Z = synthetic_data(k, dim, alpha, nsamples)
@@ -162,7 +182,7 @@ def main(alpha, k, dim, nsamples, rand):
     
     #label_map = {x: i for i, x in enumerate(G.nodes)}
     #G = nx.relabel_nodes(G, label_map)
-
+    print(f'sparsity of generated adjacency matrix: {get_sparsity(adj_m):.3f} %')
 
     #Louvain partition
     partition = get_clusters(adj_m)
@@ -172,39 +192,41 @@ def main(alpha, k, dim, nsamples, rand):
     z = gaussian_kde(xy)(xy)
     mpl.rcParams['font.family'] = 'Times New Roman'
     if dim == 3:
-        fig = plt.figure(dpi=500)
+        fig = plt.figure(dpi=100)
         ax = fig.add_subplot(projection='3d')
         sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap='viridis')
         ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
         ax.set_title(f"True Latent Space (alpha={alpha})")
         fig.colorbar(sc, label="Density")
     else:
-        fig, ax = plt.subplots(dpi=500)
+        fig, ax = plt.subplots(dpi=100)
         sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], c=z, cmap='viridis')
         #ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='Set2')
         ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
         #ax.set_title(f"True Latent Space (alpha={alpha})")
         fig.colorbar(sc, label="Density")
     ax.legend()
-    plt.savefig(f'true_latent_space_{k}.png',dpi=500)
-    #plt.show()
+    plt.savefig(f'true_latent_space_test.png',dpi=500)
+    plt.show()
 
-    plt.figure(dpi=500)
-    plt.imshow(adj_m, cmap = 'hot', interpolation='nearest')
-    #plt.title(f"Adjacency matrix ({alpha})")
-    plt.savefig(f'synt_adjacency_{alpha}.png', dpi=500)
-    #plt.show()
+    plt.figure(dpi=100)
+    plt.imshow(adj_m, interpolation='nearest')
+    plt.title(f"Adjacency matrix ({alpha})")
+    plt.savefig(f'synt_adjacency_test.png', dpi=500)
+    plt.show()
 
-    fig, ax = plt.subplots(dpi=500)
+    fig, ax = plt.subplots(dpi=100)
     ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='Set2')
     ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
-    #ax.set_title(f"True_latent_space_louvain.png", dpi=500)
-    plt.savefig(f"True_latent_space_louvain_{k}.png", dpi=500)
-    #plt.show()
+    ax.set_title("True_latent_space_louvain")
+    plt.savefig(f"True_latent_space_louvain_test.png", dpi=500)
+    plt.show()
 
     return adj_m, z, A, Z, beta, partition
 
-    
+if __name__ == "__main__":
+
+    main(alpha=0.05, k=8, dim=2, nsamples=1000, rand=False)
 
 
 
