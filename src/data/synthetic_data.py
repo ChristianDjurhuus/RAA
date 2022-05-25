@@ -118,17 +118,35 @@ def generate_network_bias(A, Z, k, d, nsamples, rand = False):
     adj_m = adj_m - torch.diag(torch.diagonal(adj_m))
     return adj_m, beta
 
-def ideal_prediction(adj_m, A, Z, beta, test_size = 0.5):
+def ideal_prediction(adj_m, G, A, Z, beta, test_size = 0.3, seed_split = False):
         '''
         A: Arcetypes
         Z: sampled datapoints
     '''
-        num_samples = round(test_size * 0.5* (adj_m.shape[0] * (adj_m.shape[0] - 1)))
-        idx_i_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[0])), num_samples=num_samples,
+        if seed_split != False:
+            np.random.seed(seed_split)
+            torch.manual_seed(seed_split)
+        N = adj_m.shape[0]
+        num_samples = round(test_size * 0.5* (N * (N - 1)))
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(N)), num_samples=num_samples,
                                 replacement=True)
         #Only sample upper corner
-        idx_j_test = torch.multinomial(input=torch.arange(0, float(adj_m.shape[1])), num_samples=num_samples,
-                                        replacement=True)
+        G = G.copy()
+        idx_j_test = torch.zeros(num_samples).long()
+        for i in range(len(idx_i_test)):
+            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(N))[
+                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(N)), num_samples=1,
+                                  replacement=True).item()].item()  # Temp solution to sample from upper corner
+            target_nodes = G.neighbors(int(idx_i_test[i]))
+            if int(idx_j_test[i]) in target_nodes:  # Loop through neighbors (super fast instead of self.edge_list)
+                G.remove_edge(int(idx_i_test[i]), int(idx_j_test[i]))
+                if nx.number_connected_components(G) == 1:
+                    continue
+                else:
+                    G.add_edge(int(idx_i_test[i]),
+                               int(idx_j_test[i]))  # skip the draw if the link splits network into two components
+                    continue
+
 
         adj_m = adj_m.clone().detach()
 
@@ -184,7 +202,7 @@ def main(alpha, k, dim, nsamples, rand):
                    delete_Z.append(list(Gcc[i])[j])
         mask = torch.ones((Z.shape[0],Z.shape[1]), dtype=torch.bool)
         mask[:, delete_Z] = False
-        Z = Z[mask].reshape(k, mask.shape[1]-len(delete_Z))
+        Z = Z[mask].reshape(k, mask.shape[1]-len(delete_Z)) #TODO: Check om reshape(k, ...) eller reshape(dim,...)
 
         mask_adj = torch.ones((adj_m.shape[0],adj_m.shape[1]), dtype=torch.bool)
         mask_adj[:, delete_Z] = False

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from sklearn.metrics import pairwise_distances
-
+import numpy as np
 
 # import modules
 from src.visualization.visualize import Visualization
@@ -10,7 +10,7 @@ from src.features.preprocessing import Preprocessing
 
 
 class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, k, data, type = "jaccard", link_pred = False, test_size = 0.3):
+    def __init__(self, k, data, type = "jaccard", link_pred = False, test_size = 0.3, seed_split = False, seed_init = False):
         super(KAA, self).__init__()
         self.link_pred = link_pred
         if link_pred:
@@ -18,10 +18,16 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.test_size = test_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         Preprocessing.__init__(self, data=data, data_type='adjacency matrix', device=self.device, data_2 = None)
-        Visualization.__init__(self)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
         if link_pred:
+            if seed_split != False:
+                np.random.seed(seed_split)
+                torch.manual_seed(seed_split)
             Link_prediction.__init__(self)
+        if seed_init != False:
+            np.random.seed(seed_init)
+            torch.manual_seed(seed_init)
+        Visualization.__init__(self)
         self.X = self.data
         self.input_size = (self.N, self.N)
         self.k = k
