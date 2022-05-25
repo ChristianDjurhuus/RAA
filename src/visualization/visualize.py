@@ -1,3 +1,4 @@
+from cv2 import arcLength
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import torch
@@ -99,7 +100,15 @@ class Visualization():
         # This only works with a gml file
         return list(nx.get_node_attributes(self.G, attribute).values())
 
-    def decision_boundary_linear(self, attribute):
+    def archetypal_nodes(self):
+        embeddings, archetypes = self.get_embeddings()
+        closest_node = np.zeros(archetypes.shape[1])
+        for i in range(archetypes.shape[1]):
+            closest_node[i] = np.argmin(((embeddings - archetypes[:,i]) ** 2).sum(-1))
+
+        return closest_node
+
+    def decision_boundary_linear(self, attribute, ax=None):
         """
         Now only works for binary classes
         https://scipython.com/blog/plotting-the-decision-boundary-of-a-logistic-regression-model/
@@ -125,22 +134,25 @@ class Visualization():
         ymin, ymax = X[:, 1].min(), X[:, 1].max()
         xd = np.array([xmin, xmax])
         yd = m * xd + c
+
+
         fig, ax = plt.subplots(dpi = 500)
         ax.set_xlim(left = xmin, right = xmax)
         ax.set_ylim(bottom = ymin, top = ymax)
         ax.plot(xd, yd, 'k', lw = 1, ls = '--')
-        ax.fill_between(xd, yd, ymin, color='tab:blue', alpha=0.2)
-        ax.fill_between(xd, yd, ymax, color='tab:orange', alpha=0.2)
+        ax.fill_between(xd, yd, ymin, color='tab:orange', alpha=0.2)
+        ax.fill_between(xd, yd, ymax, color='tab:blue', alpha=0.2)
         ax.scatter(*X[y == 0].T, s = 8, alpha=0.5)
         ax.scatter(*X[y == 1].T, s = 8, alpha=0.5)
         ax.set_ylabel(r'$x_2$', fontsize = "medium")
         ax.set_xlabel(r'$x_1$', fontsize = "medium")
         ax.set_title("Decision Boundary - LR", fontsize = "large")
+
         fig.savefig("Desicion_boundary_LR.png")
         #plt.show()
 
-        return reg.score(test_X, test_y)
-
+        return ax #reg.score(test_X, test_y)
+vi
     def decision_boundary_knn(self, attribute, n_neighbors = 10, filename=False): #TODO test if this works
         # https://stackoverflow.com/questions/45075638/graph-k-nn-decision-boundaries-in-matplotlib
         self.labels = self.get_labels(attribute)

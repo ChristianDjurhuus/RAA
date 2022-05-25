@@ -132,7 +132,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             optimizer,
             mode='max',
             factor=0.9,
-            patience=1,
+            patience=10,
             verbose=True
         )
         if not scheduling:
@@ -183,10 +183,10 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                     scheduler.step(mu_cosine_similarity)
                     last_embeddings = embeddings
                     print(mu_cosine_similarity)
-                    if early_stopping != None:
-                        if mu_cosine_similarity > early_stopping:
-                            print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
-                            break
+                    #if early_stopping != None:
+                    #    if mu_cosine_similarity > early_stopping:
+                    #        print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
+                    #        break
 
 
         
