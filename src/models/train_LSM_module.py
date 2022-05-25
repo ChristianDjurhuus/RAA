@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch_sparse import spspmm
+import numpy as np
 
 # import modules
 from src.visualization.visualize import Visualization
@@ -8,7 +9,9 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size = 0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None):
+    def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size = 0.3,
+                 non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None,
+                 seed_split = False, seed_init = False):
         super(LSM, self).__init__()
         self.data_type = data_type
         self.link_pred = link_pred
@@ -16,12 +19,18 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.test_size = test_size
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        Visualization.__init__(self)
         if self.data_type != "sparse":
             Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
             self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
             if link_pred:
+                if seed_split != False:
+                    np.random.seed(seed_split)
+                    torch.manual_seed(seed_split)
                 Link_prediction.__init__(self)
+            if seed_init != False:
+                np.random.seed(seed_init)
+                torch.manual_seed(seed_init)
+            Visualization.__init__(self)
             self.sparse_i_idx = self.edge_list[0]
             self.sparse_i_idx = self.sparse_i_idx.to(self.device)
             self.sparse_j_idx = self.edge_list[1]
@@ -114,14 +123,20 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
 
 
 class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, d,k, sample_size, data, data_type = "Edge list", data_2 = None, link_pred = False, test_size=0.3):
+    def __init__(self, d,k, sample_size, data, data_type = "Edge list", data_2 = None, link_pred = False, test_size=0.3, seed_split = False, seed_init = False):
         super(LSMAA, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         Preprocessing.__init__(self, data=data, data_type=data_type, device=self.device, data_2=data_2)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
         if link_pred:
             self.test_size = test_size
+            if seed_split != False:
+                np.random.seed(seed_split)
+                torch.manual_seed(seed_split)
             Link_prediction.__init__(self)
+        if seed_init != False:
+            np.random.seed(seed_init)
+            torch.manual_seed(seed_init)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)

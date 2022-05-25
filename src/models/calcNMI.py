@@ -6,7 +6,6 @@ import torch
 
 def calcMI(Z1, Z2):
     '''
-    WIP 
     Function to calculate mutual information between two assignment matrices
     Input:
         Z1  D1 x N  Assignment matrix

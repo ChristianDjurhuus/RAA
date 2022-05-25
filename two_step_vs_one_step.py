@@ -12,7 +12,9 @@ LDM with AA on embeddings vs. RAA:
 		Iterations = 10,000
 '''
 from src.models.train_DRRAA_module import DRRAA
-from src.models.train_LSM_module import LSMAA
+from src.models.train_LSM_module import LSMAA, LSM
+from src.models.train_KAA_module import KAA
+from src.models.calcNMI import calcNMI
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,116 +23,322 @@ import matplotlib as mpl
 from src.data.synthetic_data import main
 from src.data.synthetic_data import ideal_prediction
 import networkx as nx
+from py_pcha import PCHA
+import warnings
+warnings.filterwarnings("ignore")
 
-seed = 1999
-torch.random.manual_seed(seed)
-np.random.seed(seed)
+np.random.seed(1)
+torch.manual_seed(1)
 
+top10 = np.arange(10)
 
-#################################
-## Synthetic model comparison  ##
-##       RAA and LSM+AA        ##
-#################################
-
-#Data creation
+#create data before the runs to make sure we test initialisations of models:
 real_alpha = 0.2
 K = 3
 n = 100
 d = 2
-adj_m, z, A, Z_true, beta = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
+adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
 G = nx.from_numpy_matrix(adj_m.numpy())
 
 temp = [x for x in nx.generate_edgelist(G, data=False)]
 edge_list = np.zeros((2, len(temp)))
-for i in range(len(temp)): 
+for i in range(len(temp)):
     edge_list[0, i] = temp[i].split()[0]
     edge_list[1, i] = temp[i].split()[1]
 
-#Defining models
-iter = 10000
-num_init = 5
+#set test and train split seed. We want the same train and test split in order to know that differences
+#are because of inits.
+seed_split = 42
+
+#Run 10 different seeds with 10 different inits. Take the best of the 10 inits and save as best in seed.
+#Then plot the auc and nmi with errorbars on the 10 best in seeds.
 kvals = [2,3,4,5,6,7,8]
 
-avg_raa_aucs = {}
-avg_ldmaa_aucs = {}
-conf_raa_aucs = {}
-conf_ldmaa_aucs = {}
+raa_best_in_seed_aucs = np.zeros((len(top10),len(kvals)))
+lsmaa_best_in_seed_aucs = np.zeros((len(top10),len(kvals)))
+lsm_best_in_seed_aucs = np.zeros((len(top10),len(kvals)))
+kaa_best_in_seed_aucs = np.zeros((len(top10),len(kvals)))
 
-Iaucs = []
+raa_best_in_seed_nmis = np.zeros((len(top10),len(kvals)))
+lsmaa_best_in_seed_nmis = np.zeros((len(top10),len(kvals)))
+lsm_best_in_seed_nmis = np.zeros((len(top10),len(kvals)))
+kaa_best_in_seed_nmis = np.zeros((len(top10),len(kvals)))
+
+seed_init = 0
 
 
-for _ in range(num_init):
-    #Prediction with ideal embeddings
-    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.3)
-    Iaucs.append(ideal_score)
+#get ideal prediction:
+ideal_score, _, _ = ideal_prediction(adj_m, G, A, Z_true, beta=beta, test_size=0.3, seed_split=seed_split)
 
-for kval in kvals:
-    raa_aucs = []
-    ldmaa_aucs = []
-    for _ in range(num_init):
-        raa = DRRAA(k=kval,
-                    d=d,
-                    sample_size=1,
-                    data=edge_list,
-                    data_type = "edge list",
-                    link_pred = True
-        )
-        raa.train(iterations=iter)
-        raa_auc, _, _ = raa.link_prediction()
-        raa_aucs.append(raa_auc)
+for big_iteration in top10:
+    #################################
+    ## Synthetic model comparison  ##
+    ##       RAA and LSM+AA        ##
+    #################################
+    #Defining models
+    iter = 10000
+    num_init = 10
 
-        ldmaa = LSMAA(d=d,
-                      k=kval,
+    raa_models = {}
+    lsmaa_models = {}
+    lsm_models = {}
+    kaa_models = {}
+
+    raa_nmi_models = {}
+    lsmaa_nmi_models = {}
+    lsm_nmi_models = {}
+    kaa_nmi_models = {}
+    for kval in kvals:
+        best_loss_raa = 1000
+        best_loss_lsmaa = 1000
+        best_loss_lsm = 1000
+        best_loss_kaa = 1000
+
+        best_loss_raa_nmi = 1000
+        best_loss_lsmaa_nmi = 1000
+        best_loss_lsm_nmi = 1000
+        best_loss_kaa_nmi = 1000
+        for init in range(num_init):
+            raa = DRRAA(k=kval,
+                        d=d,
+                        sample_size=1,
+                        data=edge_list,
+                        data_type = "edge list",
+                        link_pred = True,
+                        seed_split=seed_split,
+                        seed_init=seed_init
+            )
+            raa.train(iterations=iter)
+            if np.mean(raa.losses[-100:]) < best_loss_raa:
+                raa_models[kval] = raa
+
+            lsmaa = LSMAA(d=d,
+                          k=kval,
+                          sample_size=1,
+                          data = edge_list,
+                          data_type = "Edge list",
+                          link_pred = True,
+                          seed_split=seed_split,
+                          seed_init=seed_init
+                          )
+            lsmaa.train(iterations=iter)
+            if np.mean(lsmaa.losses[-100:]) < best_loss_lsmaa:
+                lsmaa_models[kval] = lsmaa
+
+            lsm = LSM(d=d,
                       sample_size=1,
                       data = edge_list,
-                      data_type = "Edge list",
-                      link_pred = True)
-        ldmaa.train(iterations=iter)
-        ldmaa_auc, _, _ = ldmaa.link_prediction()
-        ldmaa_aucs.append(ldmaa_auc)
+                      data_type="edge list",
+                      link_pred=True,
+                      seed_split = seed_split,
+                      seed_init=seed_init
+                      )
+            lsm.train(iterations=iter)
+            if np.mean(lsm.losses[-100:]) < best_loss_lsm:
+                lsm_models[kval] = lsm
 
-    avg_raa_aucs[kval] = np.mean(raa_aucs)
-    avg_ldmaa_aucs[kval] = np.mean(ldmaa_aucs)
-    conf_raa_aucs[kval] = st.t.interval(alpha=0.95, df=len(raa_aucs)-1, 
-                        loc=np.mean(raa_aucs), 
-                        scale=st.sem(raa_aucs))
-    conf_ldmaa_aucs[kval] = st.t.interval(alpha=0.95, df=len(ldmaa_aucs)-1, 
-                        loc=np.mean(ldmaa_aucs), 
-                        scale=st.sem(ldmaa_aucs))
+            kaa = KAA(k=kval,
+                      data=adj_m.numpy(),
+                      type='jaccard',
+                      link_pred=True
+                      )
+            kaa.train(iterations=iter)
+            if np.mean(kaa.losses[-100:]) < best_loss_kaa:
+                kaa_models[kval] = kaa
+
+            #############################################################################
+            #NMIs - require full data, so link_pred=False, else everything is the same :)
+            raa_nmi = DRRAA(k=kval,
+                        d=d,
+                        sample_size=1,
+                        data=edge_list,
+                        data_type="edge list",
+                        link_pred=False,
+                        seed_init=seed_init
+                        )
+            raa_nmi.train(iterations=iter)
+            if np.mean(raa_nmi.losses[-100:]) < best_loss_raa_nmi:
+                raa_nmi_models[kval] = raa_nmi
+
+            lsmaa_nmi = LSMAA(d=d,
+                          k=kval,
+                          sample_size=1,
+                          data=edge_list,
+                          data_type="Edge list",
+                          link_pred=False,
+                          seed_init=seed_init
+                          )
+            lsmaa_nmi.train(iterations=iter)
+            if np.mean(lsmaa_nmi.losses[-100:]) < best_loss_lsmaa_nmi:
+                lsmaa_nmi_models[kval] = lsmaa_nmi
+
+            lsm_nmi = LSM(d=d,
+                          sample_size=1,
+                          data=edge_list,
+                          data_type="edge list",
+                          link_pred=False,
+                          seed_init=seed_init
+                          )
+            lsm_nmi.train(iterations=iter)
+            if np.mean(lsm_nmi.losses[-100:]) < best_loss_lsm_nmi:
+                lsm_nmi_models[kval] = lsm_nmi
+
+            kaa_nmi = KAA(k=kval,
+                      data=adj_m.numpy(),
+                      type='jaccard',
+                      link_pred=False
+                      )
+            kaa_nmi.train(iterations=iter)
+            if np.mean(kaa_nmi.losses[-100:]) < best_loss_kaa_nmi:
+                kaa_nmi_models[kval] = kaa_nmi
+
+            #make sure to increase the initialisation-seed ;)
+            seed_init += 1
+            print(seed_init)
+    for key in raa_models.keys():
+        #calc aucs
+        raa_auc, _, _ = raa_models[key].link_prediction()
+        lsmaa_auc, _, _ = lsmaa_models[key].link_prediction()
+        lsm_auc, _, _ = lsm_models[key].link_prediction()
+        kaa_auc, _, _ = kaa_models[key].link_prediction()
+
+        #calc nmis
+        raa_nmi = calcNMI(raa_nmi_models[key].Z.detach(), Z_true)
+        archetypes, Z, beta, SSE, varexpl = PCHA(X=lsmaa_nmi_models[key].latent_Z.T.detach().numpy(), noc=lsmaa_models[key].k)
+        lsmaa_nmi = calcNMI(torch.from_numpy(Z).float(), Z_true)
+        lsm_nmi = calcNMI(lsm_nmi_models[key].latent_Z.detach().T, Z_true)
+        kaa_nmi = calcNMI(kaa_nmi_models[key].S.detach(), Z_true)
 
 
-fig, ax = plt.subplots(figsize=(10,5), dpi=500)
-ax.plot(kvals, avg_raa_aucs.values(), '-o', label="RAA", color='#e3427d')
+    #append aucs and NMIs
+    raa_best_in_seed_aucs[big_iteration,:] = raa_auc
+    lsmaa_best_in_seed_aucs[big_iteration,:] = lsmaa_auc
+    lsm_best_in_seed_aucs[big_iteration,:] = lsm_auc
+    kaa_best_in_seed_aucs[big_iteration,:] = kaa_auc
+
+    raa_best_in_seed_nmis[big_iteration,:] = raa_nmi
+    lsmaa_best_in_seed_nmis[big_iteration,:] = lsmaa_nmi
+    lsm_best_in_seed_nmis[big_iteration,:] = lsm_nmi
+    kaa_best_in_seed_nmis[big_iteration,:] = kaa_nmi
+
+avg_raa_aucs = np.mean(raa_best_in_seed_aucs,0)
+avg_lsmaa_aucs = np.mean(lsmaa_best_in_seed_aucs,0)
+avg_lsm_aucs = np.mean(lsm_best_in_seed_aucs,0)
+avg_kaa_aucs = np.mean(kaa_best_in_seed_aucs,0)
+
+conf_raa_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
+                        loc=avg_raa_aucs,
+                        scale=st.sem(raa_best_in_seed_aucs))
+conf_lsmaa_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
+                        loc=avg_lsmaa_aucs,
+                        scale=st.sem(lsmaa_best_in_seed_aucs))
+conf_lsm_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
+                        loc=avg_lsm_aucs,
+                        scale=st.sem(lsm_best_in_seed_aucs))
+conf_kaa_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
+                        loc=avg_kaa_aucs,
+                        scale=st.sem(kaa_best_in_seed_aucs))
+
+avg_raa_nmis = np.mean(raa_best_in_seed_nmis,0)
+avg_lsmaa_nmis = np.mean(lsmaa_best_in_seed_nmis,0)
+avg_lsm_nmis = np.mean(lsm_best_in_seed_nmis,0)
+avg_kaa_nmis = np.mean(kaa_best_in_seed_nmis,0)
+
+conf_raa_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
+                        loc=avg_raa_nmis,
+                        scale=st.sem(raa_best_in_seed_nmis))
+conf_lsmaa_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
+                        loc=avg_lsmaa_nmis,
+                        scale=st.sem(lsmaa_best_in_seed_nmis))
+conf_lsm_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
+                        loc=avg_lsm_nmis,
+                        scale=st.sem(lsm_best_in_seed_nmis))
+conf_kaa_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
+                        loc=avg_kaa_nmis,
+                        scale=st.sem(kaa_best_in_seed_nmis))
+
+#AUC plot
+fig, ax = plt.subplots(figsize=(7,5), dpi=500)
+ax.plot(kvals, avg_raa_aucs, '-o', label="RAA", color='#e3427d')
 ax.fill_between(kvals,
-                 y1 = [x for (x,y) in conf_raa_aucs.values()],
-                 y2 = [y for (x,y) in conf_raa_aucs.values()],
+                 y1 = conf_raa_aucs[0],
+                 y2 = conf_raa_aucs[1],
                  color='#e3427d', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_raa_aucs.values()], '--', color='#e3427d')
-ax.plot(kvals, [y for (x,y) in conf_raa_aucs.values()], '--', color='#e3427d')
+ax.plot(kvals, conf_raa_aucs[0], '--', color='#e3427d')
+ax.plot(kvals, conf_raa_aucs[1], '--', color='#e3427d')
 
-ax.plot(kvals, avg_ldmaa_aucs.values(), '-o', label="LDM+AA", color='#bdb2ff')
+ax.plot(kvals, avg_lsmaa_aucs, '-o', label="LSM+AA", color='#bdb2ff')
 ax.fill_between(kvals,
-                 y1 = [x for (x,y) in conf_ldmaa_aucs.values()],
-                 y2 = [y for (x,y) in conf_ldmaa_aucs.values()],
+                 y1 = conf_lsmaa_aucs[0],
+                 y2 = conf_lsmaa_aucs[1],
                  color='#bdb2ff', alpha=0.2)
-ax.plot(kvals, [x for (x,y) in conf_ldmaa_aucs.values()], '--', color='#bdb2ff')
-ax.plot(kvals, [y for (x,y) in conf_ldmaa_aucs.values()], '--', color='#bdb2ff')
+ax.plot(kvals, conf_lsmaa_aucs[0], '--', color='#bdb2ff')
+ax.plot(kvals, conf_lsmaa_aucs[1], '--', color='#bdb2ff')
 
+ax.plot(kvals, avg_lsm_aucs, '-o', label="LSM", color='#e68653')
+ax.fill_between(kvals,
+                 y1 = conf_lsm_aucs[0],
+                 y2 = conf_lsm_aucs[1],
+                 color='#e68653', alpha=0.2)
+ax.plot(kvals, conf_lsm_aucs[0], '--', color='#e68653')
+ax.plot(kvals, conf_lsm_aucs[1], '--', color='#e68653')
 
+ax.plot(kvals, avg_kaa_aucs, '-o', label="KAA", color='#ffd6a5')
+ax.fill_between(kvals,
+                 y1 = conf_kaa_aucs[0],
+                 y2 = conf_kaa_aucs[1],
+                 color='#ffd6a5', alpha=0.2)
+ax.plot(kvals, conf_kaa_aucs[0], '--', color='#ffd6a5')
+ax.plot(kvals, conf_kaa_aucs[1], '--', color='#ffd6a5')
 
-conf_Iaucs = st.t.interval(alpha=0.95, df=len(Iaucs)-1, 
-                        loc=np.mean(Iaucs), 
-                        scale=st.sem(Iaucs))
-ax.plot(K,np.mean(Iaucs),'o', markersize=5, color='#a0c4ff')
-ax.errorbar(K, np.mean(Iaucs), 
-            [abs(x-y)/2 for (x,y) in [conf_Iaucs]],
-            solid_capstyle='projecting', capsize=5,
-            label="ideal predicter", color='#a0c4ff')
-
+ax.plot(K,ideal_score,'o', markersize=5, color='#a0c4ff', label="Ideal Predicter")
 ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
 ax.legend()
-plt.savefig('two_step_vs_one_step.png',dpi=500)
-plt.show()
+plt.savefig('two_step_vs_one_step_auc.png',dpi=500)
+#plt.show()
+
+
+#NMI plot:
+fig, ax = plt.subplots(figsize=(7,5), dpi=500)
+ax.plot(kvals, avg_raa_nmis, '-o', label="RAA", color='#e3427d')
+ax.fill_between(kvals,
+                 y1 = conf_raa_nmis[0],
+                 y2 = conf_raa_nmis[1],
+                 color='#e3427d', alpha=0.2)
+ax.plot(kvals, conf_raa_nmis[0], '--', color='#e3427d')
+ax.plot(kvals, conf_raa_nmis[1], '--', color='#e3427d')
+
+ax.plot(kvals, avg_lsmaa_nmis, '-o', label="LSM+AA", color='#bdb2ff')
+ax.fill_between(kvals,
+                 y1 = conf_lsmaa_nmis[0],
+                 y2 = conf_lsmaa_nmis[1],
+                 color='#bdb2ff', alpha=0.2)
+ax.plot(kvals, conf_lsmaa_nmis[0], '--', color='#bdb2ff')
+ax.plot(kvals, conf_lsmaa_nmis[1], '--', color='#bdb2ff')
+
+ax.plot(kvals, avg_lsm_nmis, '-o', label="LSM", color='#e68653')
+ax.fill_between(kvals,
+                 y1 = conf_lsm_nmis[0],
+                 y2 = conf_lsm_nmis[1],
+                 color='#e68653', alpha=0.2)
+ax.plot(kvals, conf_lsm_nmis[0], '--', color='#e68653')
+ax.plot(kvals, conf_lsm_nmis[1], '--', color='#e68653')
+
+ax.plot(kvals, avg_kaa_nmis, '-o', label="KAA", color='#ffd6a5')
+ax.fill_between(kvals,
+                 y1 = conf_kaa_nmis[0],
+                 y2 = conf_kaa_nmis[1],
+                 color='#ffd6a5', alpha=0.2)
+ax.plot(kvals, conf_kaa_nmis[0], '--', color='#ffd6a5')
+ax.plot(kvals, conf_kaa_nmis[1], '--', color='#ffd6a5')
+
+ax.plot(K,ideal_score,'o', markersize=5, color='#a0c4ff', label="Ideal Predicter")
+ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
+ax.grid(alpha=.3)
+ax.set_xlabel("k: Number of archetypes in models")
+ax.set_ylabel("NMI")
+ax.legend()
+plt.savefig('two_step_vs_one_step_nmi.png',dpi=500)
