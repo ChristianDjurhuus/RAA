@@ -207,7 +207,7 @@ def main(alpha, k, dim, nsamples, rand):
     if dim == 3:
         fig = plt.figure(dpi=100)
         ax = fig.add_subplot(projection='3d')
-        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap=cmap)
+        sc = ax.scatter(synth_data[:, 0], synth_data[:, 1], synth_data[:, 2], c=z, cmap="viridis")
         ax.scatter(A[0, :], A[1, :], A[2, :], marker='^', c='black', label="Archetypes")
         ax.set_title(f"True Latent Space (alpha={alpha})")
         fig.colorbar(sc, label="Density")
@@ -224,13 +224,13 @@ def main(alpha, k, dim, nsamples, rand):
 
     plt.savefig(f'true_latent_space_test.png',dpi=100)
     plt.show()
-
+    print(f"fraction of links: {get_sparsity(adj_m):.3f}")
     fig, ax = plt.subplots(dpi=100)
     ax.imshow(adj_m,cmap="Greys", interpolation='none')
     #fig.set_facecolor("white")
     #ax.plot(0,0, "o", c="black", label=f"fraction of links: {get_sparsity(adj_m):.3f}")
     ax.set_title(f"Adjacency matrix ({alpha})")
-    ax.legend()
+    #ax.legend()
     #ax.savefig(f'synt_adjacency_test.png', dpi=500)
     plt.show()
 
