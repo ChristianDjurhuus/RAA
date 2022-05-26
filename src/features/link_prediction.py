@@ -11,6 +11,7 @@ from sklearn import preprocessing
 from scipy import stats
 import networkx as nx
 from py_pcha import PCHA
+import archetypes as arch
 
 
 class Link_prediction():
@@ -44,8 +45,10 @@ class Link_prediction():
                     theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (Sample_size)
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
-                    archetypes, Z, beta, SSE, varexpl = PCHA(X=self.latent_Z.T.detach().numpy(),noc=self.k)
-                    latent_Z = torch.from_numpy(Z.T).float()
+                    #archetypes, Z, beta, SSE, varexpl = PCHA(X=self.latent_Z.T.detach().numpy(),noc=self.k)
+                    aa = arch.AA(n_archetypes=self.k)
+                    Z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = torch.from_numpy(Z).float()
                     z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
                     theta = self.beta - z_pdist_test  # (test_size)
@@ -82,9 +85,11 @@ class Link_prediction():
                     theta = self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test  # (Sample_size)
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
-                    aa = archetypes.AA(n_archetypes=self.k)
-                    lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
-                    latent_Z = torch.from_numpy(lsm_z).float()
+                    #aa = archetypes.AA(n_archetypes=self.k)
+                    #lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    #latent_Z = torch.from_numpy(lsm_z).float()
+                    aa = arch.AA(n_archetypes=self.k)
+                    latent_Z = aa.fit_transform(self.latent_Z.detach().numpy())
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
                     theta = self.beta - z_pdist_test  # (test_size)
