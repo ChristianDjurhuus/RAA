@@ -27,8 +27,8 @@ from py_pcha import PCHA
 import warnings
 warnings.filterwarnings("ignore")
 
-np.random.seed(1)
-torch.manual_seed(1)
+np.random.seed(42)
+torch.manual_seed(42)
 
 top10 = np.arange(10)
 
@@ -76,8 +76,8 @@ for big_iteration in top10:
     ##       RAA and LSM+AA        ##
     #################################
     #Defining models
-    iter = 10000
-    num_init = 10
+    iter = 105
+    num_init = 2
 
     raa_models = {}
     lsmaa_models = {}
@@ -195,12 +195,28 @@ for big_iteration in top10:
             #make sure to increase the initialisation-seed ;)
             seed_init += 1
             print(seed_init)
+
+    raa_aucs = []
+    lsmaa_aucs = []
+    lsm_aucs = []
+    kaa_aucs = []
+
+    raa_nmis = []
+    lsmaa_nmis = []
+    lsm_nmis = []
+    kaa_nmis = []
+
     for key in raa_models.keys():
         #calc aucs
         raa_auc, _, _ = raa_models[key].link_prediction()
         lsmaa_auc, _, _ = lsmaa_models[key].link_prediction()
         lsm_auc, _, _ = lsm_models[key].link_prediction()
         kaa_auc, _, _ = kaa_models[key].link_prediction()
+
+        raa_aucs.append(raa_auc)
+        lsmaa_aucs.append(lsmaa_auc)
+        lsm_aucs.append(lsm_auc)
+        kaa_aucs.append(kaa_auc)
 
         #calc nmis
         raa_nmi = calcNMI(raa_nmi_models[key].Z.detach(), Z_true)
@@ -209,17 +225,21 @@ for big_iteration in top10:
         lsm_nmi = calcNMI(lsm_nmi_models[key].latent_Z.detach().T, Z_true)
         kaa_nmi = calcNMI(kaa_nmi_models[key].S.detach(), Z_true)
 
+        raa_nmis.append(raa_nmi)
+        lsmaa_nmis.append(lsmaa_nmi)
+        lsm_nmis.append(lsm_nmi)
+        kaa_nmis.append(kaa_nmi)
 
     #append aucs and NMIs
-    raa_best_in_seed_aucs[big_iteration,:] = raa_auc
-    lsmaa_best_in_seed_aucs[big_iteration,:] = lsmaa_auc
-    lsm_best_in_seed_aucs[big_iteration,:] = lsm_auc
-    kaa_best_in_seed_aucs[big_iteration,:] = kaa_auc
+    raa_best_in_seed_aucs[big_iteration,:] = raa_aucs
+    lsmaa_best_in_seed_aucs[big_iteration,:] = lsmaa_aucs
+    lsm_best_in_seed_aucs[big_iteration,:] = lsm_aucs
+    kaa_best_in_seed_aucs[big_iteration,:] = kaa_aucs
 
-    raa_best_in_seed_nmis[big_iteration,:] = raa_nmi
-    lsmaa_best_in_seed_nmis[big_iteration,:] = lsmaa_nmi
-    lsm_best_in_seed_nmis[big_iteration,:] = lsm_nmi
-    kaa_best_in_seed_nmis[big_iteration,:] = kaa_nmi
+    raa_best_in_seed_nmis[big_iteration,:] = raa_nmis
+    lsmaa_best_in_seed_nmis[big_iteration,:] = lsmaa_nmis
+    lsm_best_in_seed_nmis[big_iteration,:] = lsm_nmis
+    kaa_best_in_seed_nmis[big_iteration,:] = kaa_nmis
 
 avg_raa_aucs = np.mean(raa_best_in_seed_aucs,0)
 avg_lsmaa_aucs = np.mean(lsmaa_best_in_seed_aucs,0)
