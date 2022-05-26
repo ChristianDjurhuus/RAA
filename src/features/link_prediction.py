@@ -73,7 +73,7 @@ class Link_prediction():
 
                     M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
                                                             Z[:, self.removed_i])).T  # Size of test set e.g. K x N
-                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
                     z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
                     theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test)  # (test_size)
                 if self.__class__.__name__ == "LSM":
