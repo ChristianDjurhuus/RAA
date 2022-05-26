@@ -91,11 +91,9 @@ class BDRRAA(nn.Module):
         with torch.no_grad():
             Z_i = F.softmax(self.Z_i, dim=0)  # (K x N)
             Z_j = F.softmax(self.Z_j, dim=0)
-            Z = torch.cat((Z_i[:,idx_i_test], Z_j[:,idx_j_test]),1) #Concatenate partition embeddings
-            G = torch.cat((self.G[idx_i_test,:], self.G[idx_j_test,:]), 0)
-
+            Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
             Z = F.softmax(Z, dim=0)
-            G = F.sigmoid(G)
+            G = F.sigmoid(self.G)
             C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
 
             M_i = torch.matmul(self.A,
@@ -173,7 +171,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(params=model.parameters(), lr=0.05)
 
     losses = []
-    iterations = 20000
+    iterations = 10000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
