@@ -50,7 +50,7 @@ class Visualization():
                         self.archetypes[2, :], marker='^', c='black')
             else:
                 fig = plt.subplots(dpi=500)
-                plt.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="tab10", label="Node embeddings")
+                plt.scatter(embeddings[:, 0], embeddings[:, 1], c=cmap, cmap="viridis", label="Node embeddings") # list(cmap.values())
                 plt.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black', label="Archetypes")
                 # Plotting learning curve
                 '''if self.__class__.__name__ == "KAA":
@@ -136,7 +136,7 @@ class Visualization():
         yd = m * xd + c
 
 
-        fig, ax = plt.subplots(dpi = 500)
+        #fig, ax = plt.subplots(dpi = 500)
         ax.set_xlim(left = xmin, right = xmax)
         ax.set_ylim(bottom = ymin, top = ymax)
         ax.plot(xd, yd, 'k', lw = 1, ls = '--')
@@ -148,11 +148,11 @@ class Visualization():
         ax.set_xlabel(r'$x_1$', fontsize = "medium")
         ax.set_title("Decision Boundary - LR", fontsize = "large")
 
-        fig.savefig("Desicion_boundary_LR.png")
+        #fig.savefig("Desicion_boundary_LR.png")
         #plt.show()
 
         return ax #reg.score(test_X, test_y)
-vi
+        
     def decision_boundary_knn(self, attribute, n_neighbors = 10, filename=False): #TODO test if this works
         # https://stackoverflow.com/questions/45075638/graph-k-nn-decision-boundaries-in-matplotlib
         self.labels = self.get_labels(attribute)
