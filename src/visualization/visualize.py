@@ -1,4 +1,4 @@
-from cv2 import arcLength
+#from cv2 import arcLength
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import torch
@@ -151,8 +151,7 @@ class Visualization():
         fig.savefig("Desicion_boundary_LR.png")
         #plt.show()
 
-        return ax #reg.score(test_X, test_y)
-vi
+        return ax #reg.score(test_X, test_y)vi
     def decision_boundary_knn(self, attribute, n_neighbors = 10, filename=False): #TODO test if this works
         # https://stackoverflow.com/questions/45075638/graph-k-nn-decision-boundaries-in-matplotlib
         self.labels = self.get_labels(attribute)
