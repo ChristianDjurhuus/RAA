@@ -10,7 +10,6 @@ from sklearn.model_selection import cross_val_score
 from sklearn import preprocessing
 from scipy import stats
 import networkx as nx
-from py_pcha import PCHA
 import archetypes as arch
 
 
@@ -45,7 +44,6 @@ class Link_prediction():
                     theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (Sample_size)
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
-                    #archetypes, Z, beta, SSE, varexpl = PCHA(X=self.latent_Z.T.detach().numpy(),noc=self.k)
                     aa = arch.AA(n_archetypes=self.k)
                     Z = aa.fit_transform(self.latent_Z.detach().numpy())
                     latent_Z = torch.from_numpy(Z).float()
@@ -76,7 +74,7 @@ class Link_prediction():
 
                     M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
                                                             Z[:, self.removed_i])).T  # Size of test set e.g. K x N
-                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
                     z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
                     theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test)  # (test_size)
                 if self.__class__.__name__ == "LSM":

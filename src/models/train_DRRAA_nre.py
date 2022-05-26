@@ -12,7 +12,8 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3):
+    def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3,
+                 seed_split = False, seed_init = False):
         super(DRRAA_nre, self).__init__()
         # TODO Skal finde en måde at loade data ind på. CHECK
         # TODO Skal sørge for at alle classes for de parametre de skal bruge. CHECK
@@ -27,7 +28,13 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.edge_list, self.N, self.G= Preprocessing.convert_to_egde_list(self)
         if link_pred:
             self.test_size = test_size
+            if seed_split != False:
+                np.random.seed(seed_split)
+                torch.manual_seed(seed_split)
             Link_prediction.__init__(self)
+        if seed_init != False:
+            np.random.seed(seed_init)
+            torch.manual_seed(seed_init)
         Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)

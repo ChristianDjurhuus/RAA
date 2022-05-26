@@ -23,7 +23,7 @@ import matplotlib as mpl
 from src.data.synthetic_data import main
 from src.data.synthetic_data import ideal_prediction
 import networkx as nx
-from py_pcha import PCHA
+import archetypes as arch
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -76,8 +76,8 @@ for big_iteration in top10:
     ##       RAA and LSM+AA        ##
     #################################
     #Defining models
-    iter = 105
-    num_init = 2
+    iter = 10000
+    num_init = 10
 
     raa_models = {}
     lsmaa_models = {}
@@ -89,15 +89,15 @@ for big_iteration in top10:
     lsm_nmi_models = {}
     kaa_nmi_models = {}
     for kval in kvals:
-        best_loss_raa = 1000
-        best_loss_lsmaa = 1000
-        best_loss_lsm = 1000
-        best_loss_kaa = 1000
+        best_loss_raa = 10000
+        best_loss_lsmaa = 10000
+        best_loss_lsm = 10000
+        best_loss_kaa = 10000
 
-        best_loss_raa_nmi = 1000
-        best_loss_lsmaa_nmi = 1000
-        best_loss_lsm_nmi = 1000
-        best_loss_kaa_nmi = 1000
+        best_loss_raa_nmi = 10000
+        best_loss_lsmaa_nmi = 10000
+        best_loss_lsm_nmi = 10000
+        best_loss_kaa_nmi = 10000
         for init in range(num_init):
             raa = DRRAA(k=kval,
                         d=d,
@@ -220,8 +220,9 @@ for big_iteration in top10:
 
         #calc nmis
         raa_nmi = calcNMI(raa_nmi_models[key].Z.detach(), Z_true)
-        archetypes, Z, beta, SSE, varexpl = PCHA(X=lsmaa_nmi_models[key].latent_Z.T.detach().numpy(), noc=lsmaa_models[key].k)
-        lsmaa_nmi = calcNMI(torch.from_numpy(Z).float(), Z_true)
+        aa = arch.AA(n_archetypes=key)
+        Z = aa.fit_transform(lsmaa.latent_Z.detach().numpy())
+        lsmaa_nmi = calcNMI(torch.from_numpy(Z).T.float(), Z_true)
         lsm_nmi = calcNMI(lsm_nmi_models[key].latent_Z.detach().T, Z_true)
         kaa_nmi = calcNMI(kaa_nmi_models[key].S.detach(), Z_true)
 
@@ -355,7 +356,6 @@ ax.fill_between(kvals,
 ax.plot(kvals, conf_kaa_nmis[0], '--', color='#ffd6a5')
 ax.plot(kvals, conf_kaa_nmis[1], '--', color='#ffd6a5')
 
-ax.plot(K,ideal_score,'o', markersize=5, color='#a0c4ff', label="Ideal Predicter")
 ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
