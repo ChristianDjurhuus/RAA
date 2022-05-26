@@ -24,7 +24,7 @@ def random_points():
     center_x = 0
     center_y = 0
     #Radius
-    r = 20
+    r = 10
     angle = (np.random.random())*2*np.pi #np.cos and sin assumes radians not degrees
     #angle = random.random()*2*np.pi
     return np.array([center_x + np.cos(angle) * r, center_y + np.sin(angle)* r])
@@ -257,13 +257,13 @@ def main(alpha, k, dim, nsamples, rand):
     ax.scatter(synth_data[:, 0], synth_data[:, 1], c=list(partition.values()), cmap='tab10')
     ax.scatter(A[0, :], A[1, :], marker='^', c='black', label="Archetypes")
     #ax.set_title(f"True_latent_space_louvain.png", dpi=500)
-    plt.savefig(f"True_latent_space_louvain_test.png", dpi=500)
+    #plt.savefig(f"True_latent_space_louvain_test.png", dpi=500)
     #plt.show()
     return adj_m, z, A, Z, beta, partition
 
 if __name__ == "__main__":
 
-    main(alpha=0.2, k=8, dim=2, nsamples=1000, rand=True)
+    main(alpha=0.2, k=3, dim=2, nsamples=100, rand=False)
 
 
 
