@@ -2,6 +2,7 @@ from numpy import zeros
 import torch
 import torch.nn as nn
 from scipy.io import mmread
+import scipy
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from sklearn import metrics
@@ -13,6 +14,7 @@ import numpy as np
 
 class BDRRAA(nn.Module):
     def __init__(self, input_size: tuple, k: int, d: int, sampling_weights: tuple, sample_size: tuple, edge_list):
+    #def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, seed_split = False, seed_init = False):
         super(BDRRAA, self).__init__()
         self.input_size = input_size
         self.k = k
@@ -23,12 +25,10 @@ class BDRRAA(nn.Module):
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k))
 
-
         self.Z_i = torch.nn.Parameter(torch.randn(self.k, self.input_size[0]))
         self.Z_j = torch.nn.Parameter(torch.randn(self.k, self.input_size[1]))
 
         self.G = torch.nn.Parameter(torch.randn(self.input_size[0]+self.input_size[1], self.k))
-
 
         self.sampling_i_weights = sampling_weights[0]
         self.sampling_j_weights = sampling_weights[1]
@@ -69,12 +69,13 @@ class BDRRAA(nn.Module):
         sample_i_idx, sample_j_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
         Z_i = F.softmax(self.Z_i, dim=0)  # (K x N)
         Z_j = F.softmax(self.Z_j, dim=0)
-        Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
-        G = torch.sigmoid(self.G)  # Sigmoid activation function
+        Z = torch.cat((Z_i[:,sample_i_idx], Z_j[:,sample_j_idx]),1) #Concatenate partition embeddings
+        G = torch.cat((self.G[sample_i_idx,:], self.G[sample_j_idx,:]), 0)
+        G = torch.sigmoid(G)  # Sigmoid activation function
         C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
         # For the nodes without links
         bias_matrix = self.beta[sample_i_idx].unsqueeze(1) + self.gamma[sample_j_idx]  # (N x N)
-        AZC = torch.mm(self.A, torch.mm(Z, C)).T
+        AZC = torch.mm(self.A, torch.mm(Z, C))
         mat = (torch.exp(bias_matrix -
                          ((torch.mm(AZC,Z_i[:,sample_i_idx]).T.unsqueeze(1) -
                            torch.mm(AZC,Z_j[:,sample_j_idx]).T + 1e-06) ** 2).sum(-1) ** 0.5)).sum()
@@ -82,30 +83,26 @@ class BDRRAA(nn.Module):
                      (((AZC @ Z_i[:,sparse_sample_i]).T -
                        (AZC @ Z_j[:,sparse_sample_j]).T + 1e-06) **2).sum(-1)).sum()
         log_likelihood_sparse = mat_links - mat
-        # z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_i_idx.shape[0]).unsqueeze(0)),
-        #                           (torch.mm(mat, #TODO: diagonal
-        #                                     torch.exp(torch.ones(sample_j_idx.shape[0])).unsqueeze(-1)))))
-        # For the nodes with links
-        # z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - ((
-        #    ((torch.matmul(AZC, Z_i[:, sparse_sample_i]).T - torch.mm(AZC, Z_j[:, sparse_sample_j]).T + 1e-06) ** 2).sum(
-        #        -1))) ** 0.5).sum()
-
-        # log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
 
 
 
     def link_prediction(self, X_test, idx_i_test, idx_j_test):
         with torch.no_grad():
-            Z = F.softmax(self.Z, dim=0)
-            G = F.sigmoid(self.G)
+            Z_i = F.softmax(self.Z_i, dim=0)  # (K x N)
+            Z_j = F.softmax(self.Z_j, dim=0)
+            Z = torch.cat((Z_i[:,idx_i_test], Z_j[:,idx_j_test]),1) #Concatenate partition embeddings
+            G = torch.cat((self.G[idx_i_test,:], self.G[idx_j_test,:]), 0)
+
+            Z = F.softmax(Z, dim=0)
+            G = F.sigmoid(G)
             C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
 
             M_i = torch.matmul(self.A,
                                torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test])).T  # Size of test set e.g. K x N
             M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, idx_j_test])).T
             z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-            theta = (self.beta[idx_i_test] + self.beta[idx_j_test] - z_pdist_test)  # N x N
+            theta = (self.beta[idx_i_test] + self.gamma[idx_j_test] - z_pdist_test)  # N x N
 
             # Get the rate -> exp(log_odds)
             rate = torch.exp(theta)  # N
@@ -125,6 +122,10 @@ if __name__ == "__main__":
 
     #g = igraph.read("data/toy_data/divorce/divorce.mtx", format="edge")
     G = mmread('data/toy_data/divorce/divorce.mtx')
+    #https://stackoverflow.com/questions/49222857/modulenotfounderror-no-module-named-graph-tool
+    import graph_tools as gt
+    #g = gt.collection.ns["board_directors/net2m_2002-05-01"]
+    #G = nx.read_graphml("data/raw/crime/network.xml")
     edge_list = torch.tensor([G.row,G.col]).T
     edge_list = edge_list.long()
     seed = 4
@@ -132,23 +133,18 @@ if __name__ == "__main__":
 
     # A = mmread("data/raw/soc-karate.mtx")
     # A = A.todense()
-    k = 2
+    k = 3
     d = 2
 
-    link_pred = False
+    link_pred = True
 
     if link_pred:
-        num_samples = round(0.2 * N)
-        idx_i_test = torch.multinomial(input=torch.arange(0, float(N)), num_samples=num_samples,
+        num_samples = round(0.3 * ((50 * 9)))
+        idx_i_test = torch.multinomial(input=torch.arange(0, float(50)), num_samples=num_samples,
                                        replacement=True)
-        idx_j_test = torch.tensor(np.zeros(num_samples)).long()
-        for i in range(len(idx_i_test)):
-            idx_j_test[i] = torch.arange(idx_i_test[i].item(), float(N))[
-                torch.multinomial(input=torch.arange(idx_i_test[i].item(), float(N)), num_samples=1,
-                                  replacement=True).item()].item()  # Temp solution to sample from upper corner
+        idx_j_test = torch.multinomial(input=torch.arange(0, float(9)), num_samples=num_samples, replacement=True)
 
         test = torch.stack((idx_i_test, idx_j_test))
-
 
         # TODO: could be a killer.. maybe do it once and save adjacency list ;)
         def if_edge(a, edge_list):
@@ -158,14 +154,26 @@ if __name__ == "__main__":
             edge_list = list(zip(edge_list[0], edge_list[1]))
             return [a[i] in edge_list for i in range(len(a))]
 
+        target = [] #if_edge(test, edge_list)
+        G = G.todense()
+        for i in range(len(idx_i_test)):
+            if G[idx_i_test[i], idx_j_test[i]] == 1:
+                G[idx_i_test[i], idx_j_test[i]] = 0
+                target.append(True)
+            else:
+                target.append(False)
 
-        target = if_edge(test, edge_list)
+        G = scipy.sparse.coo_matrix(G)
+        edge_list = torch.tensor([G.row,G.col]).T
+        edge_list = edge_list.long()
 
-    model = BDRRAA(input_size=(50, 9), k=k, d = d,sampling_weights=(torch.ones(10),torch.ones(5)), sample_size=(10,5), edge_list=edge_list)
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
+
+
+    model = BDRRAA(input_size=(50, 9), k=k, d = d,sampling_weights=(torch.ones(50),torch.ones(9)), sample_size=(20,5), edge_list=edge_list)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.05)
 
     losses = []
-    iterations = 100000
+    iterations = 20000
     for _ in range(iterations):
         loss = - model.log_likelihood() / model.input_size[0]
         optimizer.zero_grad()
@@ -222,7 +230,8 @@ if __name__ == "__main__":
         ax.set_title(f"Latent space after {iterations} iterations")
     else:
         fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(), c='red')
+        ax1.scatter(embeddings[model.input_size[0]:, 0].detach().numpy(), embeddings[model.input_size[0]:, 1].detach().numpy(), c='red')
+        ax1.scatter(embeddings[:model.input_size[0], 0].detach().numpy(), embeddings[:model.input_size[0], 1].detach().numpy(), c='blue')
         ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
         #ax1.scatter(embeddings_j[:, 0].detach().numpy(), embeddings_j[:, 1].detach().numpy(), c='blue')
         #ax1.scatter(archetypes_j[0, :].detach().numpy(), archetypes_j[1, :].detach().numpy(), marker='^', c='purple')
