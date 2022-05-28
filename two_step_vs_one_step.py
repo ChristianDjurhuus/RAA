@@ -25,12 +25,13 @@ from src.data.synthetic_data import ideal_prediction
 import networkx as nx
 import archetypes as arch
 import warnings
+import torch.nn.functional as F
 warnings.filterwarnings("ignore")
 
 np.random.seed(42)
 torch.manual_seed(42)
 
-top10 = np.arange(10)
+top10 = np.arange(2)
 
 #create data before the runs to make sure we test initialisations of models:
 real_alpha = 0.2
@@ -70,14 +71,15 @@ seed_init = 0
 #get ideal prediction:
 ideal_score, _, _ = ideal_prediction(adj_m, G, A, Z_true, beta=beta, test_size=0.3, seed_split=seed_split)
 
+
+iter = 10000
+num_init = 2
 for big_iteration in top10:
     #################################
     ## Synthetic model comparison  ##
     ##       RAA and LSM+AA        ##
     #################################
     #Defining models
-    iter = 10000
-    num_init = 10
 
     raa_models = {}
     lsmaa_models = {}
@@ -88,15 +90,45 @@ for big_iteration in top10:
     lsmaa_nmi_models = {}
     lsm_nmi_models = {}
     kaa_nmi_models = {}
+
+    best_loss_lsm = 10000
+    best_loss_lsm_nmi = 10000
+    for init in range(num_init):
+        lsm = LSM(d=d+1,
+                    sample_size=1,
+                    data = edge_list,
+                    data_type="edge list",
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init
+                    )
+        lsm.train(iterations=iter)
+        if np.mean(lsm.losses[-100:]) < best_loss_lsm:
+            lsm_models[big_iteration] = lsm
+            best_loss_lsm = np.mean(lsm.losses[-100:])
+
+        lsm_nmi = LSM(d=d+1,
+                        sample_size=1,
+                        data=edge_list,
+                        data_type="edge list",
+                        link_pred=False,
+                        seed_init=seed_init
+                        )
+        lsm_nmi.train(iterations=iter)
+        if np.mean(lsm_nmi.losses[-100:]) < best_loss_lsm_nmi:
+            lsm_nmi_models[big_iteration] = lsm_nmi
+            best_loss_lsm_nmi = np.mean(lsm_nmi.losses[-100:])
+
+    
+
+
     for kval in kvals:
         best_loss_raa = 10000
         best_loss_lsmaa = 10000
-        best_loss_lsm = 10000
         best_loss_kaa = 10000
 
         best_loss_raa_nmi = 10000
         best_loss_lsmaa_nmi = 10000
-        best_loss_lsm_nmi = 10000
         best_loss_kaa_nmi = 10000
         for init in range(num_init):
             raa = DRRAA(k=kval,
@@ -110,9 +142,10 @@ for big_iteration in top10:
             )
             raa.train(iterations=iter)
             if np.mean(raa.losses[-100:]) < best_loss_raa:
-                raa_models[kval] = raa
+                raa_models[kval] = raa #Should they be updated here?
+                best_loss_raa = np.mean(raa.losses[-100:])
 
-            lsmaa = LSMAA(d=d,
+            lsmaa = LSMAA(d=d+1,
                           k=kval,
                           sample_size=1,
                           data = edge_list,
@@ -124,18 +157,7 @@ for big_iteration in top10:
             lsmaa.train(iterations=iter)
             if np.mean(lsmaa.losses[-100:]) < best_loss_lsmaa:
                 lsmaa_models[kval] = lsmaa
-
-            lsm = LSM(d=d,
-                      sample_size=1,
-                      data = edge_list,
-                      data_type="edge list",
-                      link_pred=True,
-                      seed_split = seed_split,
-                      seed_init=seed_init
-                      )
-            lsm.train(iterations=iter)
-            if np.mean(lsm.losses[-100:]) < best_loss_lsm:
-                lsm_models[kval] = lsm
+                best_loss_lsmaa = np.mean(lsmaa.losses[-100:])
 
             kaa = KAA(k=kval,
                       data=adj_m.numpy(),
@@ -145,6 +167,7 @@ for big_iteration in top10:
             kaa.train(iterations=iter)
             if np.mean(kaa.losses[-100:]) < best_loss_kaa:
                 kaa_models[kval] = kaa
+                best_loss_kaa = np.mean(kaa.losses[-100:])
 
             #############################################################################
             #NMIs - require full data, so link_pred=False, else everything is the same :)
@@ -160,7 +183,7 @@ for big_iteration in top10:
             if np.mean(raa_nmi.losses[-100:]) < best_loss_raa_nmi:
                 raa_nmi_models[kval] = raa_nmi
 
-            lsmaa_nmi = LSMAA(d=d,
+            lsmaa_nmi = LSMAA(d=d+1,
                           k=kval,
                           sample_size=1,
                           data=edge_list,
@@ -172,16 +195,6 @@ for big_iteration in top10:
             if np.mean(lsmaa_nmi.losses[-100:]) < best_loss_lsmaa_nmi:
                 lsmaa_nmi_models[kval] = lsmaa_nmi
 
-            lsm_nmi = LSM(d=d,
-                          sample_size=1,
-                          data=edge_list,
-                          data_type="edge list",
-                          link_pred=False,
-                          seed_init=seed_init
-                          )
-            lsm_nmi.train(iterations=iter)
-            if np.mean(lsm_nmi.losses[-100:]) < best_loss_lsm_nmi:
-                lsm_nmi_models[kval] = lsm_nmi
 
             kaa_nmi = KAA(k=kval,
                       data=adj_m.numpy(),
@@ -205,17 +218,24 @@ for big_iteration in top10:
     lsmaa_nmis = []
     lsm_nmis = []
     kaa_nmis = []
+    
+    
+    lsm_auc, _, _ = lsm_models[big_iteration].link_prediction()
+    Z_lsm = F.softmax(lsm_models[big_iteration].latent_Z, dim=0)
+    lsm_nmi = calcNMI(Z_lsm.detach().T, Z_true) #maybe detach().numpy()
+    lsm_aucs.append(lsm_auc)
+    lsm_nmis.append(lsm_nmi)
 
     for key in raa_models.keys():
         #calc aucs
         raa_auc, _, _ = raa_models[key].link_prediction()
         lsmaa_auc, _, _ = lsmaa_models[key].link_prediction()
-        lsm_auc, _, _ = lsm_models[key].link_prediction()
+        #lsm_auc, _, _ = lsm_models[key].link_prediction()
         kaa_auc, _, _ = kaa_models[key].link_prediction()
 
         raa_aucs.append(raa_auc)
         lsmaa_aucs.append(lsmaa_auc)
-        lsm_aucs.append(lsm_auc)
+        #lsm_aucs.append(lsm_auc)
         kaa_aucs.append(kaa_auc)
 
         #calc nmis
@@ -223,12 +243,12 @@ for big_iteration in top10:
         aa = arch.AA(n_archetypes=key)
         Z = aa.fit_transform(lsmaa.latent_Z.detach().numpy())
         lsmaa_nmi = calcNMI(torch.from_numpy(Z).T.float(), Z_true)
-        lsm_nmi = calcNMI(lsm_nmi_models[key].latent_Z.detach().T, Z_true)
+        #lsm_nmi = calcNMI(lsm_nmi_models[key].latent_Z.detach().T, Z_true)
         kaa_nmi = calcNMI(kaa_nmi_models[key].S.detach(), Z_true)
 
         raa_nmis.append(raa_nmi)
         lsmaa_nmis.append(lsmaa_nmi)
-        lsm_nmis.append(lsm_nmi)
+        #lsm_nmis.append(lsm_nmi)
         kaa_nmis.append(kaa_nmi)
 
     #append aucs and NMIs
@@ -254,7 +274,7 @@ conf_lsmaa_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
                         loc=avg_lsmaa_aucs,
                         scale=st.sem(lsmaa_best_in_seed_aucs))
 conf_lsm_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
-                        loc=avg_lsm_aucs,
+                       loc=avg_lsm_aucs,
                         scale=st.sem(lsm_best_in_seed_aucs))
 conf_kaa_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
                         loc=avg_kaa_aucs,

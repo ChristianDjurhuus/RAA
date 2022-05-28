@@ -113,6 +113,7 @@ for big_iteration in top10:
             raa.train(iterations=iter)
             if np.mean(raa.losses[-100:]) < best_loss_raa:
                 raa_models[kval] = raa
+                best_loss_raa = np.mean(raa.losses[-100:])
 
             raa_ng = DRRAA_ngating(d=d,
                           k=kval,
@@ -126,6 +127,7 @@ for big_iteration in top10:
             raa_ng.train(iterations=iter)
             if np.mean(raa_ng.losses[-100:]) < best_loss_raa_ng:
                 raa_ng_models[kval] = raa_ng
+                best_loss_raa_ng = np.mean(raa_ng.losses[-100:])
 
             raa_nre = DRRAA_nre(d=d,
                       k = kval,
@@ -139,6 +141,7 @@ for big_iteration in top10:
             raa_nre.train(iterations=iter)
             if np.mean(raa_nre.losses[-100:]) < best_loss_raa_nre:
                 raa_nre_models[kval] = raa_nre
+                best_loss_raa_nre = np.mean(raa_nre.losses[-100:])
 
             raa_bare = DRRAA_bare(d=d,
                           k=kval,
@@ -152,6 +155,7 @@ for big_iteration in top10:
             raa_bare.train(iterations=iter)
             if np.mean(raa_bare.losses[-100:]) < best_loss_raa_bare:
                 raa_bare_models[kval] = raa_bare
+                best_loss_raa_bare = np.mean(raa_bare.losses[-100:])
 
             #############################################################################
             #NMIs - require full data, so link_pred=False, else everything is the same :)
@@ -166,6 +170,7 @@ for big_iteration in top10:
             raa_nmi.train(iterations=iter)
             if np.mean(raa_nmi.losses[-100:]) < best_loss_raa_nmi:
                 raa_nmi_models[kval] = raa_nmi
+                best_loss_raa_nmi = np.mean(raa_nmi.losses[-100:])
 
             raa_ng_nmi = DRRAA_ngating(k=kval,
                         d=d,
@@ -178,6 +183,7 @@ for big_iteration in top10:
             raa_ng_nmi.train(iterations=iter)
             if np.mean(raa_ng_nmi.losses[-100:]) < best_loss_raa_ng_nmi:
                 raa_ng_nmi_models[kval] = raa_ng_nmi
+                best_loss_raa_ng_nmi = np.mean(raa_ng_nmi.losses[-100:])
 
             raa_nre_nmi = DRRAA_nre(k=kval,
                         d=d,
@@ -190,6 +196,7 @@ for big_iteration in top10:
             raa_nre_nmi.train(iterations=iter)
             if np.mean(raa_nre_nmi.losses[-100:]) < best_loss_raa_nre_nmi:
                 raa_nre_nmi_models[kval] = raa_nre_nmi
+                best_loss_raa_nre_nmi = np.mean(raa_nre_nmi.losses[-100:])
 
             raa_bare_nmi = DRRAA_bare(k=kval,
                         d=d,
@@ -202,6 +209,7 @@ for big_iteration in top10:
             raa_bare_nmi.train(iterations=iter)
             if np.mean(raa_bare_nmi.losses[-100:]) < best_loss_raa_bare_nmi:
                 raa_bare_nmi_models[kval] = raa_bare_nmi
+                best_loss_raa_bare_nmi = np.mean(raa_bare_nmi.losses[-100:])
 
             #make sure to increase the initialisation-seed ;)
             seed_init += 1
