@@ -202,7 +202,7 @@ def main(alpha, k, dim, nsamples, rand):
                    delete_Z.append(list(Gcc[i])[j])
         mask = torch.ones((Z.shape[0],Z.shape[1]), dtype=torch.bool)
         mask[:, delete_Z] = False
-        Z = Z[mask].reshape(k, mask.shape[1]-len(delete_Z)) #TODO: Check om reshape(k, ...) eller reshape(dim,...)
+        Z = Z[mask].reshape(k, mask.shape[1]-len(delete_Z))
 
         mask_adj = torch.ones((adj_m.shape[0],adj_m.shape[1]), dtype=torch.bool)
         mask_adj[:, delete_Z] = False
@@ -241,7 +241,7 @@ def main(alpha, k, dim, nsamples, rand):
     ax.legend()
 
     plt.savefig(f'true_latent_space_test.png',dpi=100)
-    plt.show()
+    #plt.show()
     print(f"fraction of links: {get_sparsity(adj_m):.3f}")
     fig, ax = plt.subplots(dpi=100)
     ax.imshow(adj_m,cmap="Greys", interpolation='none')
@@ -250,7 +250,7 @@ def main(alpha, k, dim, nsamples, rand):
     ax.set_title(f"Adjacency matrix ({alpha})")
     #ax.legend()
     #ax.savefig(f'synt_adjacency_test.png', dpi=500)
-    plt.show()
+    #plt.show()
 
 
     fig, ax = plt.subplots(dpi=100)
