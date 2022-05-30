@@ -94,7 +94,7 @@ for big_iteration in top10:
     best_loss_lsm = 10000
     best_loss_lsm_nmi = 10000
     for init in range(num_init):
-        lsm = LSM(d=d+1,
+        lsm = LSM(d=d,
                     sample_size=1,
                     data = edge_list,
                     data_type="edge list",
@@ -106,18 +106,6 @@ for big_iteration in top10:
         if np.mean(lsm.losses[-100:]) < best_loss_lsm:
             lsm_models[big_iteration] = lsm
             best_loss_lsm = np.mean(lsm.losses[-100:])
-
-        lsm_nmi = LSM(d=d+1,
-                        sample_size=1,
-                        data=edge_list,
-                        data_type="edge list",
-                        link_pred=False,
-                        seed_init=seed_init
-                        )
-        lsm_nmi.train(iterations=iter)
-        if np.mean(lsm_nmi.losses[-100:]) < best_loss_lsm_nmi:
-            lsm_nmi_models[big_iteration] = lsm_nmi
-            best_loss_lsm_nmi = np.mean(lsm_nmi.losses[-100:])
 
     
 
@@ -183,7 +171,7 @@ for big_iteration in top10:
             if np.mean(raa_nmi.losses[-100:]) < best_loss_raa_nmi:
                 raa_nmi_models[kval] = raa_nmi
 
-            lsmaa_nmi = LSMAA(d=d+1,
+            lsmaa_nmi = LSMAA(d=d,
                           k=kval,
                           sample_size=1,
                           data=edge_list,
