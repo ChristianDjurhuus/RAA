@@ -28,17 +28,22 @@ import warnings
 import torch.nn.functional as F
 warnings.filterwarnings("ignore")
 
-np.random.seed(42)
-torch.manual_seed(42)
+rand = False
+if rand:
+    np.random.seed(1)
+    torch.manual_seed(1)
+else:
+    np.random.seed(42)
+    torch.manual_seed(42)
 
-top10 = np.arange(2)
+top10 = np.arange(3)
 
 #create data before the runs to make sure we test initialisations of models:
 real_alpha = 0.2
 K = 3
 n = 100
 d = 2
-adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
+adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=rand)
 G = nx.from_numpy_matrix(adj_m.numpy())
 
 temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -71,26 +76,20 @@ seed_init = 0
 #get ideal prediction:
 ideal_score, _, _ = ideal_prediction(adj_m, G, A, Z_true, beta=beta, test_size=0.3, seed_split=seed_split)
 
-
-iter = 10000
+iter = 2000
 num_init = 2
+
+raa_models = {kval: [] for kval in kvals}
+lsmaa_models = {kval: [] for kval in kvals}
+lsm_models = {kval: [] for kval in kvals}
+kaa_models = {kval: [] for kval in kvals}
+
 for big_iteration in top10:
     #################################
     ## Synthetic model comparison  ##
     ##       RAA and LSM+AA        ##
     #################################
     #Defining models
-
-    raa_models = {}
-    lsmaa_models = {}
-    lsm_models = {}
-    kaa_models = {}
-
-    raa_nmi_models = {}
-    lsmaa_nmi_models = {}
-    lsm_nmi_models = {}
-    kaa_nmi_models = {}
-
     best_loss_lsm = 10000
     best_loss_lsm_nmi = 10000
     for init in range(num_init):
@@ -107,17 +106,11 @@ for big_iteration in top10:
             lsm_models[big_iteration] = lsm
             best_loss_lsm = np.mean(lsm.losses[-100:])
 
-    
-
-
     for kval in kvals:
         best_loss_raa = 10000
         best_loss_lsmaa = 10000
         best_loss_kaa = 10000
 
-        best_loss_raa_nmi = 10000
-        best_loss_lsmaa_nmi = 10000
-        best_loss_kaa_nmi = 10000
         for init in range(num_init):
             raa = DRRAA(k=kval,
                         d=d,
@@ -130,10 +123,10 @@ for big_iteration in top10:
             )
             raa.train(iterations=iter)
             if np.mean(raa.losses[-100:]) < best_loss_raa:
-                raa_models[kval] = raa #Should they be updated here?
+                raa_models_temp = raa #Should they be updated here?
                 best_loss_raa = np.mean(raa.losses[-100:])
 
-            lsmaa = LSMAA(d=d+1,
+            lsmaa = LSMAA(d=d,
                           k=kval,
                           sample_size=1,
                           data = edge_list,
@@ -144,116 +137,125 @@ for big_iteration in top10:
                           )
             lsmaa.train(iterations=iter)
             if np.mean(lsmaa.losses[-100:]) < best_loss_lsmaa:
-                lsmaa_models[kval] = lsmaa
+                lsmaa_models_temp = lsmaa
                 best_loss_lsmaa = np.mean(lsmaa.losses[-100:])
 
             kaa = KAA(k=kval,
                       data=adj_m.numpy(),
                       type='jaccard',
-                      link_pred=True
+                      link_pred=True,
+                      seed_split = seed_split,
+                      seed_init=seed_init
                       )
             kaa.train(iterations=iter)
             if np.mean(kaa.losses[-100:]) < best_loss_kaa:
-                kaa_models[kval] = kaa
+                kaa_models_temp = kaa
                 best_loss_kaa = np.mean(kaa.losses[-100:])
-
-            #############################################################################
-            #NMIs - require full data, so link_pred=False, else everything is the same :)
-            raa_nmi = DRRAA(k=kval,
-                        d=d,
-                        sample_size=1,
-                        data=edge_list,
-                        data_type="edge list",
-                        link_pred=False,
-                        seed_init=seed_init
-                        )
-            raa_nmi.train(iterations=iter)
-            if np.mean(raa_nmi.losses[-100:]) < best_loss_raa_nmi:
-                raa_nmi_models[kval] = raa_nmi
-
-            lsmaa_nmi = LSMAA(d=d,
-                          k=kval,
-                          sample_size=1,
-                          data=edge_list,
-                          data_type="Edge list",
-                          link_pred=False,
-                          seed_init=seed_init
-                          )
-            lsmaa_nmi.train(iterations=iter)
-            if np.mean(lsmaa_nmi.losses[-100:]) < best_loss_lsmaa_nmi:
-                lsmaa_nmi_models[kval] = lsmaa_nmi
-
-
-            kaa_nmi = KAA(k=kval,
-                      data=adj_m.numpy(),
-                      type='jaccard',
-                      link_pred=False
-                      )
-            kaa_nmi.train(iterations=iter)
-            if np.mean(kaa_nmi.losses[-100:]) < best_loss_kaa_nmi:
-                kaa_nmi_models[kval] = kaa_nmi
 
             #make sure to increase the initialisation-seed ;)
             seed_init += 1
             print(seed_init)
 
-    raa_aucs = []
-    lsmaa_aucs = []
-    lsm_aucs = []
-    kaa_aucs = []
+        # Append the best models
+        raa_models[kval].append(raa_models_temp)
+        lsmaa_models[kval].append(lsmaa_models_temp)
+        kaa_models[kval].append(kaa_models_temp)
 
-    raa_nmis = []
-    lsmaa_nmis = []
+raa_aucs = []
+lsmaa_aucs = []
+lsm_aucs = []
+kaa_aucs = []
+
+raa_nmis = []
+lsmaa_nmis = []
+lsm_nmis = []
+kaa_nmis = []
+
+for big_iteration in top10:
+    for inner_loop in top10:
+        # Compute pairwise NMI's between LSM
+        if big_iteration != inner_loop:
+            Z1_LSM = F.softmax(lsm_models[big_iteration].latent_Z.cpu(), dim=0)
+            Z1_LSM = Z1_LSM.detach()
+            Z2_LSM = F.softmax(lsm_models[inner_loop].latent_Z.cpu(), dim=0)
+            Z2_LSM = Z2_LSM.detach()
+            lsm_nmi = calcNMI(Z1_LSM, Z2_LSM) 
+            lsm_nmis.append(lsm_nmi)
+
+    lsm_best_in_seed_nmis[big_iteration, :] = np.mean(lsm_nmis)
     lsm_nmis = []
-    kaa_nmis = []
-    
-    
     lsm_auc, _, _ = lsm_models[big_iteration].link_prediction()
-    Z_lsm = F.softmax(lsm_models[big_iteration].latent_Z, dim=0)
-    lsm_nmi = calcNMI(Z_lsm.detach().T, Z_true) #maybe detach().numpy()
-    lsm_aucs.append(lsm_auc)
-    lsm_nmis.append(lsm_nmi)
+    lsm_best_in_seed_aucs[big_iteration, :] = lsm_auc
 
-    for key in raa_models.keys():
-        #calc aucs
-        raa_auc, _, _ = raa_models[key].link_prediction()
-        lsmaa_auc, _, _ = lsmaa_models[key].link_prediction()
-        #lsm_auc, _, _ = lsm_models[key].link_prediction()
-        kaa_auc, _, _ = kaa_models[key].link_prediction()
+    for idx, key in enumerate(raa_models.keys()):
+        # Compute the AUC's for RAA, LSMAA, KAA
+        raa_auc, _, _ = raa_models[key][big_iteration].link_prediction()
+        lsmaa_auc, _, _ = lsmaa_models[key][big_iteration].link_prediction()
+        kaa_auc, _, _ = kaa_models[key][big_iteration].link_prediction()
 
-        raa_aucs.append(raa_auc)
-        lsmaa_aucs.append(lsmaa_auc)
-        #lsm_aucs.append(lsm_auc)
-        kaa_aucs.append(kaa_auc)
+        # Compute the pairwise NMI's
+        for inner_loop in top10:
+            if big_iteration != inner_loop:
+                ### RAA
+                Z = torch.softmax(raa_models[key][big_iteration].Z, dim=0)
+                G = torch.sigmoid(raa_models[key][big_iteration].Gate)
+                C = (Z.T * G) / (Z.T * G).sum(0)
+                u, sigma, v = torch.svd(raa_models[key][big_iteration].A) # Decomposition of A.
+                r = torch.matmul(torch.diag(sigma), v.T)
+                embeddings = torch.softmax(torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T, dim=0)
+                embeddings1 = embeddings.cpu().detach()
 
-        #calc nmis
-        raa_nmi = calcNMI(raa_nmi_models[key].Z.detach(), Z_true)
-        aa = arch.AA(n_archetypes=key)
-        Z = aa.fit_transform(lsmaa.latent_Z.detach().numpy())
-        lsmaa_nmi = calcNMI(torch.from_numpy(Z).T.float(), Z_true)
-        #lsm_nmi = calcNMI(lsm_nmi_models[key].latent_Z.detach().T, Z_true)
-        kaa_nmi = calcNMI(kaa_nmi_models[key].S.detach(), Z_true)
 
-        raa_nmis.append(raa_nmi)
-        lsmaa_nmis.append(lsmaa_nmi)
-        #lsm_nmis.append(lsm_nmi)
-        kaa_nmis.append(kaa_nmi)
+                Z = torch.softmax(raa_models[key][inner_loop].Z, dim=0)
+                G = torch.sigmoid(raa_models[key][inner_loop].Gate)
+                C = (Z.T * G) / (Z.T * G).sum(0)
+                u, sigma, v = torch.svd(raa_models[key][big_iteration].A) # Decomposition of A.
+                r = torch.matmul(torch.diag(sigma), v.T)
+                embeddings = torch.softmax(torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T, dim=0)
+                embeddings2 = embeddings.cpu().detach()               
 
-    #append aucs and NMIs
-    raa_best_in_seed_aucs[big_iteration,:] = raa_aucs
-    lsmaa_best_in_seed_aucs[big_iteration,:] = lsmaa_aucs
-    lsm_best_in_seed_aucs[big_iteration,:] = lsm_aucs
-    kaa_best_in_seed_aucs[big_iteration,:] = kaa_aucs
+                # Calculate NMI
+                raa_nmi = calcNMI(embeddings1, embeddings2)
+                raa_nmis.append(raa_nmi)
 
-    raa_best_in_seed_nmis[big_iteration,:] = raa_nmis
-    lsmaa_best_in_seed_nmis[big_iteration,:] = lsmaa_nmis
-    lsm_best_in_seed_nmis[big_iteration,:] = lsm_nmis
-    kaa_best_in_seed_nmis[big_iteration,:] = kaa_nmis
+                ### LSMAA
+                aa = arch.AA(n_archetypes=key)
+                Z1 = torch.from_numpy(aa.fit_transform(lsmaa_models[key][big_iteration].latent_Z.cpu().detach())) #(N x K) hence tanspose
+                Z2 = torch.from_numpy(aa.fit_transform(lsmaa_models[key][inner_loop].latent_Z.cpu().detach())) #(N x K)
+                lsmaa_nmi = calcNMI(Z1.T, Z2.T)
+                lsmaa_nmis.append(lsmaa_nmi)
 
-avg_raa_aucs = np.mean(raa_best_in_seed_aucs,0)
-avg_lsmaa_aucs = np.mean(lsmaa_best_in_seed_aucs,0)
-avg_lsm_aucs = np.mean(lsm_best_in_seed_aucs,0)
-avg_kaa_aucs = np.mean(kaa_best_in_seed_aucs,0)
+                ### KAA
+                S = torch.softmax(kaa_models[key][big_iteration].S, dim=0)
+                C = torch.softmax(kaa_models[key][big_iteration].C, dim=0)
+                embeddings1 = torch.softmax((torch.matmul(torch.matmul(S, C), S).T).cpu().detach(), dim=0)
+                S = torch.softmax(kaa_models[key][inner_loop].S, dim=0)
+                C = torch.softmax(kaa_models[key][inner_loop].C, dim=0)
+                embeddings2 = torch.softmax((torch.matmul(torch.matmul(S, C), S).T).cpu().detach(), dim=0)
+                kaa_nmi = calcNMI(embeddings1, embeddings2)
+                kaa_nmis.append(kaa_nmi)
+
+        # Calculate the mean of NMI's
+        raa_nmi = np.mean(raa_nmis)
+        lsmaa_nmi = np.mean(lsmaa_nmis)
+        kaa_nmi = np.mean(kaa_nmis)
+
+        raa_nmis = []
+        lsmaa_nmis = []
+        kaa_nmis = []
+        # Append AUCs and NMIs
+        raa_best_in_seed_aucs[big_iteration, idx] = raa_auc
+        lsmaa_best_in_seed_aucs[big_iteration, idx] = lsmaa_auc
+        kaa_best_in_seed_aucs[big_iteration, idx] = kaa_auc
+
+        raa_best_in_seed_nmis[big_iteration, idx] = raa_nmi
+        lsmaa_best_in_seed_nmis[big_iteration, idx] = lsmaa_nmi
+        kaa_best_in_seed_nmis[big_iteration, idx] = kaa_nmi
+
+avg_raa_aucs = np.mean(raa_best_in_seed_aucs, 0)
+avg_lsmaa_aucs = np.mean(lsmaa_best_in_seed_aucs, 0)
+avg_lsm_aucs = np.mean(lsm_best_in_seed_aucs, 0)
+avg_kaa_aucs = np.mean(kaa_best_in_seed_aucs, 0)
 
 conf_raa_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
                         loc=avg_raa_aucs,
@@ -326,8 +328,8 @@ ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("AUC")
 ax.legend()
-plt.savefig('two_step_vs_one_step_auc.png',dpi=500)
-#plt.show()
+plt.savefig('two_step_vs_one_step_auc_test.png',dpi=500)
+plt.show()
 
 
 #NMI plot:
@@ -369,4 +371,5 @@ ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("NMI")
 ax.legend()
-plt.savefig('two_step_vs_one_step_nmi.png',dpi=500)
+plt.savefig('two_step_vs_one_step_nmi_test.png',dpi=500)
+plt.show()

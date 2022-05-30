@@ -87,6 +87,12 @@ class Visualization():
             #plt.show()
 
 
+    def plot_loss(self):
+        fig, ax = plt.subplots(dpi = 100)
+        ax.plot(self.losses, c="#00C700")
+        ax.set_yscale("log")
+        plt.show()
+
     def embedding_density(self):
         embeddings, archetypes = self.get_embeddings()
         #bounds = [[embeddings.detach().numpy()[:, 0].min(), embeddings.detach().numpy()[:, 0].max()], [embeddings.detach().numpy()[:, 1].min(), embeddings.detach().numpy()[:, 1].max()]]
