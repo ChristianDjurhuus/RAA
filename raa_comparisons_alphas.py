@@ -21,6 +21,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as st
+import torch.nn.functional as F
 import matplotlib as mpl 
 from src.data.synthetic_data import main
 from src.data.synthetic_data import ideal_prediction
@@ -62,7 +63,7 @@ for big_iteration in top10:
     ## RAA and all RAAs without stuff ##
     ####################################
     #Defining models
-    iter = 10000
+    iter = 10
     num_init = 5
 
     raa_models = {}
@@ -246,10 +247,10 @@ for big_iteration in top10:
         raa_bare_aucs.append(raa_bare_auc)
 
         #calc nmis
-        raa_nmi = calcNMI(raa_nmi_models[key].Z.detach(), Z_trues[key])
-        raa_ng_nmi = calcNMI(raa_ng_nmi_models[key].Z.detach(), Z_trues[key])
-        raa_nre_nmi = calcNMI(raa_nre_nmi_models[key].Z.detach(), Z_trues[key])
-        raa_bare_nmi = calcNMI(raa_bare_nmi_models[key].Z.detach(), Z_trues[key])
+        raa_nmi = calcNMI(F.softmax(raa_nmi_models[key].Z.detach(), dim=0), Z_trues[key])
+        raa_ng_nmi = calcNMI(F.softmax(raa_ng_nmi_models[key].Z.detach(), dim=0), Z_trues[key])
+        raa_nre_nmi = calcNMI(F.softmax(raa_nre_nmi_models[key].Z.detach(), dim=0), Z_trues[key])
+        raa_bare_nmi = calcNMI(F.softmax(raa_bare_nmi_models[key].Z.detach(), dim=0), Z_trues[key])
 
         raa_nmis.append(raa_nmi)
         raa_ng_nmis.append(raa_ng_nmi)

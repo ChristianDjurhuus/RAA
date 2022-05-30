@@ -244,7 +244,7 @@ for big_iteration in top10:
         raa_nmi = calcNMI(F.softmax(raa_nmi_models[key].Z.detach(),dim=0), Z_trues[key])
         lsm_nmi = calcNMI(F.softmax(lsm_nmi_models[key].latent_Z.detach().T,dim=0), Z_trues[key])
         aa = arch.AA(n_archetypes=k)
-        Z = aa.fit_transform(F.softmax(lsmaa_nmi_models[key].latent_Z.detach(),dim=1).numpy())
+        Z = aa.fit_transform(lsmaa_nmi_models[key].latent_Z.detach().numpy())
         lsmaa_nmi = calcNMI(torch.from_numpy(Z).T.float(), Z_trues[key])
         kaa_nmi = calcNMI(F.softmax(kaa_nmi_models[key].S.detach(),dim=0), Z_trues[key])
 
