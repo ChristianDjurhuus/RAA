@@ -9,6 +9,7 @@ from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from matplotlib.colors import ListedColormap
+from matplotlib import patches
 #from fast_histogram import histogram2d
 
 class Visualization():
@@ -117,6 +118,57 @@ class Visualization():
             closest_node[i] = np.argmin(((embeddings - archetypes[:,i]) ** 2).sum(-1))
 
         return closest_node
+
+    def archetype_partitions(self):
+        Z = torch.softmax(self.Z, dim=0)
+        partitions =[[] for i in range(Z.shape[0])]
+        for i in range(Z.shape[1]):
+            idx = torch.argmax(Z[:,i])
+            partitions[idx].append(i)
+        return partitions
+
+
+    def order_adjacency_matrix(self, filename="ordered_adj_m.png"):
+        """
+        - G is a netorkx graph
+        - node_order (optional) is a list of nodes, where each node in G
+            appears exactly once
+        - partitions is a list of node lists, where each node in G appears
+            in exactly one node list
+        - colors is a list of strings indicating what color each
+            partition should be
+        If partitions is specified, the same number of colors needs to be
+        specified.
+        """
+        colors=["blue"]
+        partitions  = [self.archetype_partitions()]
+        node_order = [node for archetype in partitions[0] for node in archetype]
+        adjacency_matrix = nx.to_numpy_matrix(self.G, nodelist=node_order)
+
+        #Plot adjacency matrix in toned-down black and white
+        fig = plt.figure(figsize=(5, 5), dpi = 200) # in inches
+        plt.imshow(adjacency_matrix,
+                    cmap="Greys",
+                    interpolation="none")
+        
+        # The rest is just if you have sorted nodes by a partition and want to
+        # highlight the module boundaries
+        assert len(partitions) == len(colors)
+        ax = plt.gca()
+        for partition, color in zip(partitions, colors):
+            current_idx = 0
+            for module in partition:
+                ax.add_patch(patches.Rectangle((current_idx, current_idx),
+                                            len(module), # Width
+                                            len(module), # Height
+                                            facecolor="none",
+                                            edgecolor=color,
+                                            linewidth="1"))
+                current_idx += len(module)
+        fig.savefig(filename, dpi=500)
+        plt.show()
+
+
 
     def decision_boundary_linear(self, attribute, ax=None):
         """
