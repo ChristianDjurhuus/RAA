@@ -63,7 +63,7 @@ for big_iteration in top10:
     ## RAA and all RAAs without stuff ##
     ####################################
     #Defining models
-    iter = 10
+    iter = 10000
     num_init = 5
 
     raa_models = {}
