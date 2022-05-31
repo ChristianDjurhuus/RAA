@@ -164,7 +164,7 @@ class Link_prediction():
             {round((self.G.number_of_edges() / ((self.G.number_of_nodes() ** 2)) * 0.5) * 100, 2)}% - this is after removing
             edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
         if self.__class__.__name__ == 'KAA':
-            self.data = torch.from_numpy(self.data).long()
+            self.data = torch.from_numpy(nx.adjacency_matrix(G).todense()).long()
             X_test = self.data.clone()
             X_test[:] = 0
             X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]

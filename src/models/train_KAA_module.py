@@ -10,14 +10,15 @@ from src.features.preprocessing import Preprocessing
 
 
 class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, k, data, type = "jaccard", link_pred = False, test_size = 0.3, seed_split = False, seed_init = False):
+    def __init__(self, k, data, type = "jaccard", link_pred = False, test_size = 0.3, seed_split = False, seed_init = False,
+                 data_type='edge list'):
         super(KAA, self).__init__()
         self.link_pred = link_pred
         if link_pred:
             self.X_test = 0
             self.test_size = test_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        Preprocessing.__init__(self, data=data, data_type='adjacency matrix', device=self.device, data_2 = None)
+        Preprocessing.__init__(self, data=data, data_type=data_type, device=self.device, data_2 = None)
         self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
         if link_pred:
             if seed_split != False:
