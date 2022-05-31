@@ -166,7 +166,7 @@ class Link_prediction():
             {round((self.G.number_of_edges() / ((self.G.number_of_nodes() ** 2)) * 0.5) * 100, 2)}% - this is after removing
             edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
         if self.__class__.__name__ == 'KAA':
-            self.data = torch.from_numpy(self.data).long()
+            self.data = torch.from_numpy(nx.adjacency_matrix(G).todense()).long()
             X_test = self.data.clone()
             X_test[:] = 0
             X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
@@ -231,4 +231,5 @@ class Link_prediction():
         #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
         reg = LogisticRegression(solver="saga", max_iter=1000, random_state=42)
         cv_scores = cross_val_score(reg, X, y, cv=5)
-        return np.mean(cv_scores), np.std(cv_scores)
+        conf_int = stats.norm.interval(0.95, loc=np.mean(cv_scores), scale=np.std(cv_scores) / np.sqrt(len(cv_scores)))
+        return np.mean(cv_scores), conf_int, np.std(cv_scores)
