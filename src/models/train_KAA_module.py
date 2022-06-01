@@ -11,7 +11,7 @@ from src.features.preprocessing import Preprocessing
 
 class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, data, type = "jaccard", link_pred = False, test_size = 0.3, seed_split = False, seed_init = False,
-                 data_type='edge list'):
+                 data_type='adjacency matrix'):
         super(KAA, self).__init__()
         self.link_pred = link_pred
         if link_pred:

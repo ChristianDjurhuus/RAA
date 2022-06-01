@@ -113,7 +113,7 @@ for alpha_idx, alpha in enumerate(alphas):
         raa.train(iterations=iter)
         raa_models.append(raa)
 
-        lsm = LSM(d=d+1,
+        lsm = LSM(d=d,
                     sample_size=1,
                     data=edge_list,
                     data_type="edge list",
@@ -181,7 +181,7 @@ for alpha_idx, alpha in enumerate(alphas):
         raa_nmi.train(iterations=iter)
         raa_nmi_models.append(raa_nmi)
 
-        lsm_nmi = LSM(d=d+1,
+        lsm_nmi = LSM(d=d,
                     sample_size=1,
                     data=edge_list,
                     data_type="edge list",
