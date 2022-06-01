@@ -38,6 +38,17 @@ class Visualization():
             embeddings = (torch.matmul(torch.matmul(S, C), S).T).cpu().detach().numpy()
             archetypes = torch.matmul(S, C).cpu().detach().numpy()
             return embeddings, archetypes
+        
+        if self.__class__.__name__ == "BDRRAA":
+            Z_i = torch.softmax(self.Z_i, dim=0)
+            Z_j = torch.softmax(self.Z_j, dim=0)
+            Z = torch.cat((Z_i,Z_j),1)
+            G = torch.sigmoid(self.Gate)
+            C = (Z.T * G) / (Z.T * G).sum(0)
+
+            embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
+            archetypes = torch.matmul(self.A, torch.matmul(Z, C))
+            return embeddings, archetypes
 
     def plot_latent_and_loss(self, iterations, cmap='red', file_name=None):
         embeddings, archetypes = self.get_embeddings()
@@ -86,6 +97,25 @@ class Visualization():
                 ax2.set_yscale("log")
             plt.savefig(file_name, dpi=500)
             #plt.show()
+
+        if self.__class__.__name__ == "BDRRAA":
+            embeddings, archetypes = self.get_embeddings()
+            if embeddings.shape[1] == 3:
+                fig = plt.figure()
+                ax = fig.add_subplot(projection='3d')
+                ax.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(),
+                        embeddings[:, 2].detach().numpy(), c='red')
+                ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(),
+                        archetypes[2, :].detach().numpy(), marker='^', c='black')
+                plt.show()
+
+            else:
+                fig, (ax1, ax2) = plt.subplots(1, 2)
+                ax1.scatter(embeddings[self.sample_shape[0]:, 0].detach().numpy(), embeddings[self.sample_shape[0]:, 1].detach().numpy(), c='red')
+                ax1.scatter(embeddings[:self.sample_shape[0], 0].detach().numpy(), embeddings[:self.sample_shape[0], 1].detach().numpy(), c='blue')
+                ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
+                plt.show()
+
 
 
     def plot_loss(self):
