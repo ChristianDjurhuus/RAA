@@ -21,7 +21,7 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        if self.data_type != "sparse":
+        if self.data_type != "sparse" and self.__class__.__name__ != "BDRRAA":
             while (True not in self.target or False not in self.target):
                 self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
 
@@ -106,6 +106,19 @@ class Link_prediction():
                                     - 2 * (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_j[i]])) + 1e-06
                     theta = -z_dist  # (test_size)
 
+                if self.__class__.__name__ == "BDRRAA":
+                    Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)
+                    Z_j = torch.softmax(self.Z_j, dim=0)
+                    Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
+                    #Z = F.softmax(Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
+                    
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = (self.beta[self.removed_i] + self.gamma[self.removed_j] - z_pdist_test)  # N x N
+
             rate = torch.exp(theta)  # N
 
             fpr, tpr, threshold = metrics.roc_curve(self.target, rate.cpu().data.numpy())
@@ -189,6 +202,8 @@ class Link_prediction():
             plt.title("RAA model")
         if self.__class__.__name__ == "LSM":
             plt.title("LSM model")
+        if self.__class__.__name__ == "BDRRAA":
+            plt.title("BRAA model")
         plt.show()
 
     def get_labels(self, attribute):
