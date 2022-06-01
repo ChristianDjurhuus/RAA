@@ -65,7 +65,9 @@ class Link_prediction():
             
             if self.data_type == "sparse":
                 #Create target
-                self.target = torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
+                self.target = torch.cat((torch.zeros(self.non_sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
+                # torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.non_sparse_i_idx_removed.shape[0])))
+                # torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
 
                 if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
                     Z = torch.softmax(self.Z, dim=0)
