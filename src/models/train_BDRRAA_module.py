@@ -60,11 +60,11 @@ class BDRRAA(nn.Module, Link_prediction, Visualization):
         # matrix multiplication B = Adjacency x Indices translator
         # see spspmm function, it give a multiplication between two matrices
         # indexC is the indices where we have non-zero values and valueC the actual values (in this case ones)
-        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1]), indices_j_translator,
-                                torch.ones(indices_j_translator.shape[1]), self.sample_shape[0], self.sample_shape[1],
+        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1], device = self.device), indices_j_translator,
+                                torch.ones(indices_j_translator.shape[1], device = self.device), self.sample_shape[0], self.sample_shape[1],
                                 self.sample_shape[1], coalesced=True)
         # second matrix multiplication C = Indices translator x B, indexC returns where we have edges inside the sample
-        indexC, valueC = spspmm(indices_i_translator, torch.ones(indices_i_translator.shape[1]), indexC, valueC,
+        indexC, valueC = spspmm(indices_i_translator, torch.ones(indices_i_translator.shape[1], device = self.device), indexC, valueC,
                                 self.sample_shape[0], self.sample_shape[0], self.sample_shape[1], coalesced=True)
 
         # edge row position

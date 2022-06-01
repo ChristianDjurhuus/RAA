@@ -38,7 +38,7 @@ def sparse_experiments(datasets, ks, sample_size, iterations, LR, print_loss = F
                             non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, 
                             sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem)
 
-                raa.train(iterations = iterations[idx], LR = LR, print_loss = print_loss, scheduling = False)
+                raa.train(iterations = iterations[idx], LR = LR, print_loss = print_loss)
                 RAA_AUC_TEMP, _, _ = raa.link_prediction()
                 RAA_AUC_SCORES[dataset, k].append(RAA_AUC_TEMP)
 
@@ -51,7 +51,7 @@ def sparse_experiments(datasets, ks, sample_size, iterations, LR, print_loss = F
             lower_bound[idx].append(conf_interval[0])
             upper_bound[idx].append(conf_interval[1])
 
-    with open(f"auc_{dataset}.txt", "w") as data:
+    with open(f"auc_{dataset}_bipartite.txt", "w") as data:
         data.write(f"{dataset}: AUC:")
         data.write("\n")
 
@@ -86,4 +86,4 @@ if __name__ == "__main__":
     ks = [3, 8]
 
     for l, dataset in enumerate(datasets):
-        sparse_experiments([dataset], ks, [sample_size[l]], [iterations[l]], LR, print_loss = True)
+        sparse_experiments([dataset], ks, sample_size[l], [iterations[l]], LR, print_loss = True)
