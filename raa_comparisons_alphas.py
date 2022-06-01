@@ -22,13 +22,8 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as st
-import matplotlib as mpl 
 from src.data.synthetic_data import main
-from src.data.synthetic_data import ideal_prediction
 import networkx as nx
-import archetypes as arch
-import warnings
-warnings.filterwarnings("ignore")
 
 np.random.seed(42)
 torch.manual_seed(42)

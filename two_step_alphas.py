@@ -63,7 +63,7 @@ seed_init = 0
 ## RAA and all RAAs without stuff ##
 ####################################
 #Defining models
-iter = 10000
+iter = 10
 
 
 
@@ -262,7 +262,7 @@ for alpha_idx, alpha in enumerate(alphas):
         #calc nmis
 
         raa_nmi = calcNMI(F.softmax(raa_nmi_models[i].Z.detach(),dim=0), Z_true)
-        lsm_nmi = calcNMI(F.normalize(lsm_nmi_models[i].latent_Z.detach().T,dim=0), Z_true)
+        lsm_nmi = calcNMI(F.softmax(lsm_nmi_models[i].latent_Z.detach().T,dim=0), Z_true)
         aa = arch.AA(n_archetypes=k)
         Z = aa.fit_transform(lsmaa_nmi_models[i].latent_Z.detach().numpy())
         lsmaa_nmi = calcNMI(torch.from_numpy(Z).T.float(), Z_true)
