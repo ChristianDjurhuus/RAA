@@ -13,7 +13,7 @@ from src.features.preprocessing import Preprocessing
 
 class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3,
-                 seed_split = False, seed_init = False):
+                 seed_split = False, seed_init = False, init_Z = False):
         super(DRRAA_nre, self).__init__()
         # TODO Skal finde en måde at loade data ind på. CHECK
         # TODO Skal sørge for at alle classes for de parametre de skal bruge. CHECK
@@ -45,7 +45,10 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k, device = self.device))
 
-        self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0], device = self.device))
+        if init_Z != None:
+            self.Z = torch.nn.Parameter(init_Z)
+        else:    
+            self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0], device = self.device))
 
         self.Gate = torch.nn.Parameter(torch.randn(self.input_size[0], self.k, device = self.device))
 

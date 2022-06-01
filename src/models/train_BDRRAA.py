@@ -81,7 +81,7 @@ class BDRRAA(nn.Module):
                            torch.mm(AZC,Z_j[:,sample_j_idx]).T + 1e-06) ** 2).sum(-1) ** 0.5)).sum()
         mat_links = ((self.beta[sparse_sample_i] + self.gamma[sparse_sample_j]) -
                      (((AZC @ Z_i[:,sparse_sample_i]).T -
-                       (AZC @ Z_j[:,sparse_sample_j]).T + 1e-06) **2).sum(-1)).sum()
+                       (AZC @ Z_j[:,sparse_sample_j]).T + 1e-06) ** 2).sum(-1) ** 0.5).sum()
         log_likelihood_sparse = mat_links - mat
         return log_likelihood_sparse
 
@@ -92,12 +92,12 @@ class BDRRAA(nn.Module):
             Z_i = F.softmax(self.Z_i, dim=0)  # (K x N)
             Z_j = F.softmax(self.Z_j, dim=0)
             Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
-            Z = F.softmax(Z, dim=0)
+            #Z = F.softmax(Z, dim=0)
             G = F.sigmoid(self.G)
             C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
-
-            M_i = torch.matmul(self.A,
-                               torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test])).T  # Size of test set e.g. K x N
+            
+                
+            M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, idx_i_test])).T  # Size of test set e.g. K x N
             M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, idx_j_test])).T
             z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
             theta = (self.beta[idx_i_test] + self.gamma[idx_j_test] - z_pdist_test)  # N x N
@@ -120,13 +120,10 @@ if __name__ == "__main__":
 
     #g = igraph.read("data/toy_data/divorce/divorce.mtx", format="edge")
     G = mmread('data/toy_data/divorce/divorce.mtx')
-    #https://stackoverflow.com/questions/49222857/modulenotfounderror-no-module-named-graph-tool
-    import graph_tools as gt
-    #g = gt.collection.ns["board_directors/net2m_2002-05-01"]
-    #G = nx.read_graphml("data/raw/crime/network.xml")
+
     edge_list = torch.tensor([G.row,G.col]).T
     edge_list = edge_list.long()
-    seed = 4
+    seed = 42
     torch.random.manual_seed(seed)
 
     # A = mmread("data/raw/soc-karate.mtx")
@@ -137,7 +134,7 @@ if __name__ == "__main__":
     link_pred = True
 
     if link_pred:
-        num_samples = round(0.3 * ((50 * 9)))
+        num_samples = round(0.2 * ((50 * 9)))
         idx_i_test = torch.multinomial(input=torch.arange(0, float(50)), num_samples=num_samples,
                                        replacement=True)
         idx_j_test = torch.multinomial(input=torch.arange(0, float(9)), num_samples=num_samples, replacement=True)
@@ -167,8 +164,8 @@ if __name__ == "__main__":
 
 
 
-    model = BDRRAA(input_size=(50, 9), k=k, d = d,sampling_weights=(torch.ones(50),torch.ones(9)), sample_size=(20,5), edge_list=edge_list)
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.05)
+    model = BDRRAA(input_size=(50, 9), k=k, d = d,sampling_weights=(torch.ones(50),torch.ones(9)), sample_size=(50,9), edge_list=edge_list)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.01)
 
     losses = []
     iterations = 10000
