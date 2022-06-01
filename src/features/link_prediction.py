@@ -198,9 +198,10 @@ class Link_prediction():
         return list(nx.get_node_attributes(graph, attribute).values())
 
     def KNeighborsClassifier(self, attribute, n_neighbours = 10, gml=False):
-        if self.labels == "":
-            self.labels = self.get_labels(attribute)
+        #if self.labels == "":
+        #    self.labels = self.get_labels(attribute)
         # TODO Talk about how we get the split
+        self.labels = attribute
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
@@ -221,8 +222,9 @@ class Link_prediction():
         return kmeans.score(test_X, test_y)
 
     def logistic_regression(self, attribute):
-        if self.labels == "":
-            self.labels = self.get_lables(attribute)
+        #if self.labels == "":
+        #    self.labels = self.get_lables(attribute)
+        self.labels=attribute
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
