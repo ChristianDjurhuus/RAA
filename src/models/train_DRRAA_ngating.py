@@ -13,7 +13,7 @@ from src.features.preprocessing import Preprocessing
 
 class DRRAA_ngating(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3,
-                 seed_split = False, seed_init = False, init_Z = False):
+                 seed_split = False, seed_init = False, init_Z = None):
         super(DRRAA_ngating, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         #self.device = "cpu"
