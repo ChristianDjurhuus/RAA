@@ -14,7 +14,7 @@ from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
 
 class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, seed_split = False, seed_init = False, init_Z = False):
+    def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, seed_split = False, seed_init = False, init_Z = None):
         # TODO Skal finde en måde at loade data ind på. CHECK
         # TODO Skal sørge for at alle classes får de parametre de skal bruge. CHECK
         # TODO Skal ha indført en train funktion/class. CHECK
