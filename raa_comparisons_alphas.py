@@ -62,7 +62,7 @@ seed_init = 0
 ## RAA and all RAAs without stuff ##
 ####################################
 #Defining models
-iter = 10
+iter = 10000
 
 
 
