@@ -49,7 +49,7 @@ class Link_prediction():
                     latent_Z = torch.from_numpy(Z).float()
                     z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (test_size)
+                    theta = self.beta - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
@@ -93,7 +93,7 @@ class Link_prediction():
                     latent_Z = torch.from_numpy(latent_Z).float()
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test  # (test_size)
+                    theta = self.beta - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
