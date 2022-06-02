@@ -39,7 +39,7 @@ else:
 
 #create data before the runs to make sure we test initialisations of models:
 real_alpha = 0.2
-K = 5
+K = 3
 n = 100
 d = 2
 adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=rand)
@@ -57,8 +57,8 @@ seed_split = 42
 
 #Run 10 different seeds with 10 different inits. Take the best of the 10 inits and save as best in seed.
 #Then plot the auc and nmi with errorbars on the 10 best in seeds.
-kvals = [2,3,4,5,6,7,8]
-num_init = 10
+kvals = [2,3,4,5,6]
+num_init = 10000
 
 raa_best_in_seed_aucs = np.zeros((len(kvals),num_init))
 raa_ng_best_in_seed_aucs = np.zeros((len(kvals),num_init))
@@ -75,7 +75,7 @@ seed_init = 0
 #get ideal prediction:
 #ideal_score, _, _ = ideal_prediction(adj_m, G, A, Z_true, beta=beta, test_size=0.3, seed_split=seed_split)
 
-iter = 10000
+iter = 10
 
 
 #################################
@@ -332,7 +332,6 @@ ax.fill_between(kvals,
 ax.plot(kvals, conf_raa_bare_nmis[0], '--', color='#f0c808')
 ax.plot(kvals, conf_raa_bare_nmis[1], '--', color='#f0c808')
 
-ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("NMI")

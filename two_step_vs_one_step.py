@@ -38,7 +38,7 @@ else:
 
 #create data before the runs to make sure we test initialisations of models:
 real_alpha = 0.2
-K = 5
+K = 3
 n = 100
 d = 2
 adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=rand)
@@ -56,7 +56,7 @@ seed_split = 42
 
 #Run 10 different seeds with 10 different inits. Take the best of the 10 inits and save as best in seed.
 #Then plot the auc and nmi with errorbars on the 10 best in seeds.
-kvals = [2,3,4,5,6,7,8]
+kvals = [2,3,4,5,6]
 num_init = 10
 
 raa_best_in_seed_aucs = np.zeros((len(kvals),num_init))
@@ -374,7 +374,6 @@ ax.fill_between(kvals,
 ax.plot(kvals, conf_raainit_nmis[0], '--', color='#746ab0')
 ax.plot(kvals, conf_raainit_nmis[1], '--', color='#746ab0')
 
-ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
 ax.grid(alpha=.3)
 ax.set_xlabel("k: Number of archetypes in models")
 ax.set_ylabel("NMI")
