@@ -13,7 +13,7 @@ from src.features.preprocessing import Preprocessing
 
 class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3,
-                 seed_split = False, seed_init = False, init_Z = False):
+                 seed_split = False, seed_init = False, init_Z = None):
         super(DRRAA_nre, self).__init__()
         # TODO Skal finde en måde at loade data ind på. CHECK
         # TODO Skal sørge for at alle classes for de parametre de skal bruge. CHECK

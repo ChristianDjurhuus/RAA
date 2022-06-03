@@ -21,7 +21,7 @@ class Link_prediction():
         '''
         self.target = [False]
         self.labels = ""
-        if self.data_type != "sparse":
+        if self.data_type != "sparse" and self.__class__.__name__ != "BDRRAA":
             while (True not in self.target or False not in self.target):
                 self.target, self.idx_i_test, self.idx_j_test = self.get_test_and_train()
 
@@ -45,11 +45,11 @@ class Link_prediction():
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
                     aa = arch.AA(n_archetypes=self.k)
-                    Z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    Z = aa.fit_transform(self.latent_Z.cpu().detach().numpy())
                     latent_Z = torch.from_numpy(Z).float()
                     z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta - z_pdist_test  # (test_size)
+                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
@@ -89,10 +89,11 @@ class Link_prediction():
                     #lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
                     #latent_Z = torch.from_numpy(lsm_z).float()
                     aa = arch.AA(n_archetypes=self.k)
-                    latent_Z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = aa.fit_transform(self.latent_Z.cpu().detach().numpy())
+                    latent_Z = torch.from_numpy(latent_Z).float()
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta - z_pdist_test  # (test_size)
+                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
@@ -105,6 +106,19 @@ class Link_prediction():
                                     + S[:, self.removed_j[i]].T @ CtKC @ S[:, self.removed_j[i]]
                                     - 2 * (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_j[i]])) + 1e-06
                     theta = -z_dist  # (test_size)
+
+                if self.__class__.__name__ == "BDRRAA":
+                    Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)
+                    Z_j = torch.softmax(self.Z_j, dim=0)
+                    Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
+                    #Z = F.softmax(Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
+                    
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_i])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = (self.beta[self.removed_i] + self.gamma[self.removed_j] - z_pdist_test)  # N x N
 
             rate = torch.exp(theta)  # N
 
@@ -189,6 +203,8 @@ class Link_prediction():
             plt.title("RAA model")
         if self.__class__.__name__ == "LSM":
             plt.title("LSM model")
+        if self.__class__.__name__ == "BDRRAA":
+            plt.title("BRAA model")
         plt.show()
 
     def get_labels(self, attribute):

@@ -38,6 +38,17 @@ class Visualization():
             embeddings = (torch.matmul(torch.matmul(S, C), S).T).cpu().detach().numpy()
             archetypes = torch.matmul(S, C).cpu().detach().numpy()
             return embeddings, archetypes
+        
+        if self.__class__.__name__ == "BDRRAA":
+            Z_i = torch.softmax(self.Z_i, dim=0)
+            Z_j = torch.softmax(self.Z_j, dim=0)
+            Z = torch.cat((Z_i,Z_j),1)
+            G = torch.sigmoid(self.Gate)
+            C = (Z.T * G) / (Z.T * G).sum(0)
+
+            embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
+            archetypes = torch.matmul(self.A, torch.matmul(Z, C))
+            return embeddings, archetypes
 
     def plot_latent_and_loss(self, iterations, cmap='red', file_name=None):
         embeddings, archetypes = self.get_embeddings()
@@ -87,6 +98,25 @@ class Visualization():
             plt.savefig(file_name, dpi=500)
             #plt.show()
 
+        if self.__class__.__name__ == "BDRRAA":
+            embeddings, archetypes = self.get_embeddings()
+            if embeddings.shape[1] == 3:
+                fig = plt.figure()
+                ax = fig.add_subplot(projection='3d')
+                ax.scatter(embeddings[:, 0].detach().numpy(), embeddings[:, 1].detach().numpy(),
+                        embeddings[:, 2].detach().numpy(), c='red')
+                ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(),
+                        archetypes[2, :].detach().numpy(), marker='^', c='black')
+                plt.show()
+
+            else:
+                fig, (ax1, ax2) = plt.subplots(1, 2)
+                ax1.scatter(embeddings[self.sample_shape[0]:, 0].detach().numpy(), embeddings[self.sample_shape[0]:, 1].detach().numpy(), c='red')
+                ax1.scatter(embeddings[:self.sample_shape[0], 0].detach().numpy(), embeddings[:self.sample_shape[0], 1].detach().numpy(), c='blue')
+                ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
+                plt.show()
+
+
 
     def plot_loss(self):
         fig, ax = plt.subplots(dpi = 100)
@@ -128,7 +158,7 @@ class Visualization():
         return partitions
 
 
-    def order_adjacency_matrix(self, filename="ordered_adj_m.png"):
+    def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
         """
         - G is a netorkx graph
         - node_order (optional) is a list of nodes, where each node in G
@@ -140,6 +170,19 @@ class Visualization():
         If partitions is specified, the same number of colors needs to be
         specified.
         """
+        if self.data_type == "sparse":
+            # Collect the entire graph
+            i_partion = np.concatenate((self.sparse_i_idx, self.sparse_i_idx_removed))
+            j_partion = np.concatenate((self.sparse_j_idx, self.sparse_j_idx_removed))
+            edge_list = np.zeros((2, len(i_partion)))
+            for idx in range(len(i_partion)):
+                edge_list[0, idx] = i_partion[idx]
+                edge_list[1, idx] = j_partion[idx]
+            edge_list = list(zip(edge_list[0], edge_list[1]))
+            
+            # Make graph
+            self.G = nx.from_edgelist(edge_list)
+
         colors=["blue"]
         partitions  = [self.archetype_partitions()]
         node_order = [node for archetype in partitions[0] for node in archetype]
@@ -166,8 +209,9 @@ class Visualization():
                                             linewidth="1"))
                 current_idx += len(module)
         fig.savefig(filename, dpi=500)
-        #plt.show()
 
+        if show:
+            plt.show()
 
 
     def decision_boundary_linear(self, attribute, ax=None):
