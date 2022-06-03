@@ -29,17 +29,22 @@ import networkx as nx
 import warnings
 warnings.filterwarnings("ignore")
 
-np.random.seed(42)
-torch.manual_seed(42)
+rand = False
+if rand:
+    np.random.seed(1)
+    torch.manual_seed(1)
+else:
+    np.random.seed(42)
+    torch.manual_seed(42)
 
-top10 = np.arange(10)
+top10 = np.arange(5)
 
 #create data before the runs to make sure we test initialisations of models:
 real_alpha = 0.2
 K = 3
 n = 100
 d = 2
-adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=False)
+adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=rand)
 G = nx.from_numpy_matrix(adj_m.numpy())
 
 temp = [x for x in nx.generate_edgelist(G, data=False)]
@@ -79,27 +84,19 @@ for big_iteration in top10:
     ####################################
     #Defining models
     iter = 10000
-    num_init = 10
+    num_init = 5
 
     raa_models = {}
     raa_ng_models = {}
     raa_nre_models = {}
     raa_bare_models = {}
 
-    raa_nmi_models = {}
-    raa_ng_nmi_models = {}
-    raa_nre_nmi_models = {}
-    raa_bare_nmi_models = {}
     for kval in kvals:
         best_loss_raa = 10000
         best_loss_raa_ng = 10000
         best_loss_raa_nre = 10000
         best_loss_raa_bare = 10000
 
-        best_loss_raa_nmi = 10000
-        best_loss_raa_ng_nmi = 10000
-        best_loss_raa_nre_nmi = 10000
-        best_loss_raa_bare_nmi = 10000
         for init in range(num_init):
             raa = DRRAA(k=kval,
                         d=d,
@@ -157,60 +154,6 @@ for big_iteration in top10:
                 raa_bare_models[kval] = raa_bare
                 best_loss_raa_bare = np.mean(raa_bare.losses[-100:])
 
-            #############################################################################
-            #NMIs - require full data, so link_pred=False, else everything is the same :)
-            raa_nmi = DRRAA(k=kval,
-                        d=d,
-                        sample_size=1,
-                        data=edge_list,
-                        data_type="edge list",
-                        link_pred=False,
-                        seed_init=seed_init
-                        )
-            raa_nmi.train(iterations=iter)
-            if np.mean(raa_nmi.losses[-100:]) < best_loss_raa_nmi:
-                raa_nmi_models[kval] = raa_nmi
-                best_loss_raa_nmi = np.mean(raa_nmi.losses[-100:])
-
-            raa_ng_nmi = DRRAA_ngating(k=kval,
-                        d=d,
-                        sample_size=1,
-                        data=edge_list,
-                        data_type="edge list",
-                        link_pred=False,
-                        seed_init=seed_init
-                        )
-            raa_ng_nmi.train(iterations=iter)
-            if np.mean(raa_ng_nmi.losses[-100:]) < best_loss_raa_ng_nmi:
-                raa_ng_nmi_models[kval] = raa_ng_nmi
-                best_loss_raa_ng_nmi = np.mean(raa_ng_nmi.losses[-100:])
-
-            raa_nre_nmi = DRRAA_nre(k=kval,
-                        d=d,
-                        sample_size=1,
-                        data=edge_list,
-                        data_type="edge list",
-                        link_pred=False,
-                        seed_init=seed_init
-                        )
-            raa_nre_nmi.train(iterations=iter)
-            if np.mean(raa_nre_nmi.losses[-100:]) < best_loss_raa_nre_nmi:
-                raa_nre_nmi_models[kval] = raa_nre_nmi
-                best_loss_raa_nre_nmi = np.mean(raa_nre_nmi.losses[-100:])
-
-            raa_bare_nmi = DRRAA_bare(k=kval,
-                        d=d,
-                        sample_size=1,
-                        data=edge_list,
-                        data_type="edge list",
-                        link_pred=False,
-                        seed_init=seed_init
-                        )
-            raa_bare_nmi.train(iterations=iter)
-            if np.mean(raa_bare_nmi.losses[-100:]) < best_loss_raa_bare_nmi:
-                raa_bare_nmi_models[kval] = raa_bare_nmi
-                best_loss_raa_bare_nmi = np.mean(raa_bare_nmi.losses[-100:])
-
             #make sure to increase the initialisation-seed ;)
             seed_init += 1
             print(seed_init)
@@ -219,11 +162,6 @@ for big_iteration in top10:
     raa_ng_aucs = []
     raa_nre_aucs = []
     raa_bare_aucs = []
-
-    raa_nmis = []
-    raa_ng_nmis = []
-    raa_nre_nmis = []
-    raa_bare_nmis = []
 
     for key in raa_models.keys():
         #calc aucs
@@ -236,28 +174,12 @@ for big_iteration in top10:
         raa_ng_aucs.append(raa_ng_auc)
         raa_nre_aucs.append(raa_nre_auc)
         raa_bare_aucs.append(raa_bare_auc)
-
-        #calc nmis
-        raa_nmi = calcNMI(raa_nmi_models[key].Z.detach(), Z_true)
-        raa_ng_nmi = calcNMI(raa_ng_nmi_models[key].Z.detach(), Z_true)
-        raa_nre_nmi = calcNMI(raa_nre_nmi_models[key].Z.detach(), Z_true)
-        raa_bare_nmi = calcNMI(raa_bare_nmi_models[key].Z.detach(), Z_true)
-
-        raa_nmis.append(raa_nmi)
-        raa_ng_nmis.append(raa_ng_nmi)
-        raa_nre_nmis.append(raa_nre_nmi)
-        raa_bare_nmis.append(raa_bare_nmi)
-
+ 
     #append aucs and NMIs
     raa_best_in_seed_aucs[big_iteration,:] = raa_aucs
     raa_ng_best_in_seed_aucs[big_iteration,:] = raa_ng_aucs
     raa_nre_best_in_seed_aucs[big_iteration,:] = raa_nre_aucs
     raa_bare_best_in_seed_aucs[big_iteration,:] = raa_bare_aucs
-
-    raa_best_in_seed_nmis[big_iteration,:] = raa_nmis
-    raa_ng_best_in_seed_nmis[big_iteration,:] = raa_ng_nmis
-    raa_nre_best_in_seed_nmis[big_iteration,:] = raa_nre_nmis
-    raa_bare_best_in_seed_nmis[big_iteration,:] = raa_bare_nmis
 
 avg_raa_aucs = np.mean(raa_best_in_seed_aucs,0)
 avg_raa_ng_aucs = np.mean(raa_ng_best_in_seed_aucs,0)
@@ -276,24 +198,6 @@ conf_raa_nre_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
 conf_raa_bare_aucs = st.t.interval(alpha=0.95, df=len(avg_raa_aucs)-1,
                         loc=avg_raa_bare_aucs,
                         scale=st.sem(raa_bare_best_in_seed_aucs))
-
-avg_raa_nmis = np.mean(raa_best_in_seed_nmis,0)
-avg_raa_ng_nmis = np.mean(raa_ng_best_in_seed_nmis,0)
-avg_raa_nre_nmis = np.mean(raa_nre_best_in_seed_nmis,0)
-avg_raa_bare_nmis = np.mean(raa_bare_best_in_seed_nmis,0)
-
-conf_raa_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
-                        loc=avg_raa_nmis,
-                        scale=st.sem(raa_best_in_seed_nmis))
-conf_raa_ng_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
-                        loc=avg_raa_ng_nmis,
-                        scale=st.sem(raa_ng_best_in_seed_nmis))
-conf_raa_nre_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
-                        loc=avg_raa_nre_nmis,
-                        scale=st.sem(raa_nre_best_in_seed_nmis))
-conf_raa_bare_nmis = st.t.interval(alpha=0.95, df=len(avg_raa_nmis)-1,
-                        loc=avg_raa_bare_nmis,
-                        scale=st.sem(raa_bare_best_in_seed_nmis))
 
 #AUC plot
 fig, ax = plt.subplots(figsize=(7,5), dpi=500)
@@ -337,45 +241,3 @@ ax.set_ylabel("AUC")
 ax.legend()
 plt.savefig('raa_comparison_auc.png',dpi=500)
 #plt.show()
-
-
-#NMI plot:
-fig, ax = plt.subplots(figsize=(7,5), dpi=500)
-ax.plot(kvals, avg_raa_nmis, '-o', label="RAA", color='#e3427d')
-ax.fill_between(kvals,
-                 y1 = conf_raa_nmis[0],
-                 y2 = conf_raa_nmis[1],
-                 color='#e3427d', alpha=0.2)
-ax.plot(kvals, conf_raa_nmis[0], '--', color='#e3427d')
-ax.plot(kvals, conf_raa_nmis[1], '--', color='#e3427d')
-
-ax.plot(kvals, avg_raa_ng_nmis, '-o', label="RAA no gating", color='#4c6e81')
-ax.fill_between(kvals,
-                 y1 = conf_raa_ng_nmis[0],
-                 y2 = conf_raa_ng_nmis[1],
-                 color='#4c6e81', alpha=0.2)
-ax.plot(kvals, conf_raa_ng_nmis[0], '--', color='#4c6e81')
-ax.plot(kvals, conf_raa_ng_nmis[1], '--', color='#4c6e81')
-
-ax.plot(kvals, avg_raa_nre_nmis, '-o', label="RAA no random effects", color='#5d4b20')
-ax.fill_between(kvals,
-                 y1 = conf_raa_nre_nmis[0],
-                 y2 = conf_raa_nre_nmis[1],
-                 color='#5d4b20', alpha=0.2)
-ax.plot(kvals, conf_raa_nre_nmis[0], '--', color='#5d4b20')
-ax.plot(kvals, conf_raa_nre_nmis[1], '--', color='#5d4b20')
-
-ax.plot(kvals, avg_raa_bare_nmis, '-o', label="RAA no gating or random effects", color='#f0c808')
-ax.fill_between(kvals,
-                 y1 = conf_raa_bare_nmis[0],
-                 y2 = conf_raa_bare_nmis[1],
-                 color='#f0c808', alpha=0.2)
-ax.plot(kvals, conf_raa_bare_nmis[0], '--', color='#f0c808')
-ax.plot(kvals, conf_raa_bare_nmis[1], '--', color='#f0c808')
-
-ax.axvline(K, linestyle = '--', color='#303638', label="True number of Archetypes", alpha=0.5)
-ax.grid(alpha=.3)
-ax.set_xlabel("k: Number of archetypes in models")
-ax.set_ylabel("NMI")
-ax.legend()
-plt.savefig('raa_comparison_nmi.png',dpi=500)

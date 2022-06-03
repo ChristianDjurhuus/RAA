@@ -166,7 +166,7 @@ class Visualization():
                                             linewidth="1"))
                 current_idx += len(module)
         fig.savefig(filename, dpi=500)
-        plt.show()
+        #plt.show()
 
 
 

@@ -43,6 +43,7 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def kernel(self, X, type):
         # check pairwise_distances
         #kernel = X.T@X
+        
         if type == 'jaccard':
             kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
         if type == 'parcellating': #TODO: Does not seem to learn the structure.
