@@ -158,7 +158,7 @@ class Visualization():
         return partitions
 
 
-    def order_adjacency_matrix(self, filename="ordered_adj_m.png"):
+    def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
         """
         - G is a netorkx graph
         - node_order (optional) is a list of nodes, where each node in G
@@ -196,7 +196,8 @@ class Visualization():
                                             linewidth="1"))
                 current_idx += len(module)
         fig.savefig(filename, dpi=500)
-        plt.show()
+        if show:
+            plt.show()
 
 
 

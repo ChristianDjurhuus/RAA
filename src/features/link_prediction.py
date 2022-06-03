@@ -45,11 +45,11 @@ class Link_prediction():
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
                     aa = arch.AA(n_archetypes=self.k)
-                    Z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    Z = aa.fit_transform(self.latent_Z.cpu().detach().numpy())
                     latent_Z = torch.from_numpy(Z).float()
                     z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta - z_pdist_test  # (test_size)
+                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
@@ -89,11 +89,11 @@ class Link_prediction():
                     #lsm_z = aa.fit_transform(self.latent_Z.detach().numpy())
                     #latent_Z = torch.from_numpy(lsm_z).float()
                     aa = arch.AA(n_archetypes=self.k)
-                    latent_Z = aa.fit_transform(self.latent_Z.detach().numpy())
+                    latent_Z = aa.fit_transform(self.latent_Z.cpu().detach().numpy())
                     latent_Z = torch.from_numpy(latent_Z).float()
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta - z_pdist_test  # (test_size)
+                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
