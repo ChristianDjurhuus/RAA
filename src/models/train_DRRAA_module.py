@@ -60,18 +60,6 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
             self.N = int(self.sparse_j_idx.max() + 1)
 
-            if graph:
-                # Collect the entire graph
-                i_partion = np.concatenate((self.sparse_i_idx, self.sparse_i_idx_removed))
-                j_partion = np.concatenate((self.sparse_j_idx, self.sparse_j_idx_removed))
-                edge_list = np.zeros((2, len(i_partion)))
-                for idx in range(len(i_partion)):
-                    edge_list[0, idx] = i_partion[idx]
-                    edge_list[1, idx] = j_partion[idx]
-                edge_list = list(zip(edge_list[0], edge_list[1]))
-                
-                # Make graph
-                G = nx.from_edgelist(edge_list)
         
         Visualization.__init__(self)
 

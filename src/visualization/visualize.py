@@ -170,6 +170,19 @@ class Visualization():
         If partitions is specified, the same number of colors needs to be
         specified.
         """
+        if self.data_type == "sparse":
+            # Collect the entire graph
+            i_partion = np.concatenate((self.sparse_i_idx, self.sparse_i_idx_removed))
+            j_partion = np.concatenate((self.sparse_j_idx, self.sparse_j_idx_removed))
+            edge_list = np.zeros((2, len(i_partion)))
+            for idx in range(len(i_partion)):
+                edge_list[0, idx] = i_partion[idx]
+                edge_list[1, idx] = j_partion[idx]
+            edge_list = list(zip(edge_list[0], edge_list[1]))
+            
+            # Make graph
+            self.G = nx.from_edgelist(edge_list)
+
         colors=["blue"]
         partitions  = [self.archetype_partitions()]
         node_order = [node for archetype in partitions[0] for node in archetype]
