@@ -209,9 +209,9 @@ class Visualization():
                                             linewidth="1"))
                 current_idx += len(module)
         fig.savefig(filename, dpi=500)
+
         if show:
             plt.show()
-
 
 
     def decision_boundary_linear(self, attribute, ax=None):
