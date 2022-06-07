@@ -10,6 +10,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from matplotlib.colors import ListedColormap
 from matplotlib import patches
+from src.data.synthetic_data import truncate_colormap
 #from fast_histogram import histogram2d
 
 class Visualization():
@@ -50,8 +51,10 @@ class Visualization():
             archetypes = torch.matmul(self.A, torch.matmul(Z, C))
             return embeddings, archetypes
 
-    def plot_latent_and_loss(self, iterations, cmap='red', file_name=None):
+    def plot_latent_and_loss(self, iterations, c='red', file_name=None):
         embeddings, archetypes = self.get_embeddings()
+        cmap = plt.get_cmap('RdPu')
+        cmap = truncate_colormap(cmap, 0.2, 1)
         if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "KAA":
             if embeddings.shape[1] == 3:
                 fig = plt.figure()
@@ -65,7 +68,7 @@ class Visualization():
                 if type(cmap) == dict:
                     plt.scatter(embeddings[:, 0], embeddings[:, 1], c=list(cmap.values()), cmap="tab10", label="Node embeddings")
                 else:
-                    plt.scatter(embeddings[:, 0], embeddings[:, 1], c=cmap, cmap="tab10", label="Node embeddings")
+                    plt.scatter(embeddings[:, 0], embeddings[:, 1], c=c, cmap=cmap, label="Node embeddings")
 
                 plt.scatter(archetypes[0, :], archetypes[1, :], marker='^', c='black', label="Archetypes")
                 # Plotting learning curve
