@@ -127,18 +127,17 @@ class Visualization():
         ax.set_yscale("log")
         plt.show()
 
-    def embedding_density(self):
+    def embedding_density(self, filename = "embedding_density.pdf", show = False):
         embeddings, archetypes = self.get_embeddings()
-        #bounds = [[embeddings.detach().numpy()[:, 0].min(), embeddings.detach().numpy()[:, 0].max()], [embeddings.detach().numpy()[:, 1].min(), embeddings.detach().numpy()[:, 1].max()]]
-        #print(bounds)
-        #h = histogram2d(embeddings.detach().numpy()[:, 0], embeddings.detach().numpy()[:, 1], range = bounds, bins = round(np.sqrt(self.N)))
         x_bins = np.linspace(embeddings[:, 0].min(), embeddings[:, 0].max(), round(np.sqrt(self.N)))
         y_bins = np.linspace(embeddings[:, 1].min(), embeddings[:, 1].max(), round(np.sqrt(self.N)))
-        plt.hist2d(embeddings[:, 0], embeddings[:, 1], cmap = "OrRd", bins = [x_bins, y_bins], norm=colors.LogNorm())
-        #plt.plot(h, cmap = "OrRd", norm=colors.LogNorm())
-        #plt.axis('off')
+        cmap = plt.get_cmap('RdPu')
+        cmap = truncate_colormap(cmap, 0.2, 1)
+        plt.hist2d(embeddings[:, 0], embeddings[:, 1], cmap = cmap, bins = [x_bins, y_bins], norm=colors.LogNorm())
         plt.colorbar()
-        plt.show()
+        plt.savefig(filename, dpi = 500)
+        if show:
+            plt.show()
 
     def get_labels(self, attribute):
         # This only works with a gml file
@@ -175,8 +174,8 @@ class Visualization():
         """
         if self.data_type == "sparse":
             # Collect the entire graph
-            i_partion = np.concatenate((self.sparse_i_idx, self.sparse_i_idx_removed))
-            j_partion = np.concatenate((self.sparse_j_idx, self.sparse_j_idx_removed))
+            i_partion = np.concatenate((self.sparse_i_idx.cpu(), self.sparse_i_idx_removed.cpu()))
+            j_partion = np.concatenate((self.sparse_j_idx.cpu(), self.sparse_j_idx_removed.cpu()))
             edge_list = np.zeros((2, len(i_partion)))
             for idx in range(len(i_partion)):
                 edge_list[0, idx] = i_partion[idx]
