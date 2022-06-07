@@ -136,6 +136,8 @@ class Visualization():
         plt.savefig(filename, dpi = 500)
         if show:
             plt.show()
+        else:
+            plt.clf()
 
     def get_labels(self, attribute):
         # This only works with a gml file
@@ -212,6 +214,8 @@ class Visualization():
 
         if show:
             plt.show()
+        else:
+            plt.clf()
 
 
     def decision_boundary_linear(self, attribute, ax=None):
