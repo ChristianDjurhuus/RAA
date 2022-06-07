@@ -104,7 +104,7 @@ class Link_prediction():
                                      + S[:, self.removed_j[i]].T @ CtKC @ S[:, self.removed_j[i]]
                                      - 2 * (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_j[i]])) + 1e-06
 
-                    theta = 1-z_dist  # (test_size)
+                    theta = -z_dist  # (test_size)
 
                 if self.__class__.__name__ == "BDRRAA":
                     Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)

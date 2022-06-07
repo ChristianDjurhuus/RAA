@@ -76,7 +76,7 @@ class KAAsparse(nn.Module, Preprocessing, Link_prediction, Visualization):
         # Create diag edge list
         diag_edgelist = torch.stack((torch.arange(degree_diag.shape[0], device = self.device), torch.arange(degree_diag.shape[0], device = self.device)), 0)
         degree_diag = torch.sparse_coo_tensor(diag_edgelist, degree_diag, (self.N, self.N), device = self.device)
-        #degree_diag = torch.sparse_coo_tensor(degree_diag, torch.ones(degree_diag.shape[0], device = self.device), (self.N, self.N), device = self.device)
+
         A = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1], device = self.device, dtype = torch.float32), (self.N, self.N), device=self.device)
         matrix_product = torch.sparse.mm((degree_diag**-1), A)
         index, value = transpose(matrix_product.coalesce().indices(), matrix_product.coalesce().values(), self.N, self.N)
@@ -85,22 +85,11 @@ class KAAsparse(nn.Module, Preprocessing, Link_prediction, Visualization):
         kernel = torch.sparse.mm(matrix_product, transposed_matrix_product)
         x = torch.sparse_coo_tensor(kernel.coalesce().indices(), torch.ones(kernel.coalesce().values().shape, device = self.device), (self.N, self.N), device = self.device)
         kernel = x - kernel
-        #index, value = transpose(A.coalesce().indices(), A.coalesce().values(), self.N, self.N, coalesced=False)
-        #At = torch.sparse_coo_tensor(index, value, (self.N, self.N), device = self.device)
-        #kernel = torch.sparse.mm(At, A)
         return kernel.float()
 
     def SSE(self):
-
         S = torch.softmax(self.S, dim=0)
         C = torch.softmax(self.C, dim=0)
-        #index, value = transpose(self.K.coalesce().indices(), self.K.coalesce().values(), self.N, self.N)
-        #Kt = torch.sparse_coo_tensor(index, value, (self.N, self.N), device = self.device)
-
-        #CtK = torch.sparse.mm(self.K, C).T
-        #CtKC = torch.mm(C.T, torch.sparse.mm(self.K, C))
-        #SSt = torch.mm(S, S.T)
-        #SSE = - 2 * torch.sum( torch.sum( CtK *  S)) + torch.sum(torch.sum(CtKC * SSt))
         SSE = -2 * torch.trace(C.T @ torch.sparse.mm(self.K, S.T)) + torch.trace(C.T @ torch.sparse.mm(self.K, C) @ S @ S.T)
         return SSE
 
