@@ -93,11 +93,11 @@ class Link_prediction():
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
                     theta = self.beta.cpu() - z_pdist_test  # (test_size)
-                if self.__class__.__name__ == "KAA":
+                if self.__class__.__name__ == "KAAsparse":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
 
-                    CtKC = C.T @ self.K @ C
+                    CtKC = torch.mm(C.T, torch.sparse.mm(self.K, C))
                     z_dist = torch.zeros(len(self.removed_i))
                     for i in range(len(self.removed_i)):
                         z_dist[i] = (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_i[i]]
