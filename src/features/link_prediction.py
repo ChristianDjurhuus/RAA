@@ -97,13 +97,14 @@ class Link_prediction():
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
 
-                    CtKC = torch.mm(C.T, torch.sparse.mm(self.K, C))
+                    CtKC = C.T @ torch.sparse.mm(self.K, C)
                     z_dist = torch.zeros(len(self.removed_i))
                     for i in range(len(self.removed_i)):
                         z_dist[i] = (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_i[i]]
-                                    + S[:, self.removed_j[i]].T @ CtKC @ S[:, self.removed_j[i]]
-                                    - 2 * (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_j[i]])) + 1e-06
-                    theta = -z_dist  # (test_size)
+                                     + S[:, self.removed_j[i]].T @ CtKC @ S[:, self.removed_j[i]]
+                                     - 2 * (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_j[i]])) + 1e-06
+
+                    theta = 1-z_dist  # (test_size)
 
                 if self.__class__.__name__ == "BDRRAA":
                     Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)

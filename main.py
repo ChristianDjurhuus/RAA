@@ -231,7 +231,7 @@ def main6():
     non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
 
     model = KAAsparse(k = k, sample_size = 0.2, data = data, data2 = data2, non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem)
-    iterations = 250
+    iterations = 1000
     model.train(iterations = iterations, print_loss = True)
     auc, _, _ = model.link_prediction()
     print(auc)
