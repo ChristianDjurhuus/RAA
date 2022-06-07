@@ -54,8 +54,7 @@ class Link_prediction():
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
 
-                    CtKC = C.T @ self.kernel(self.X_test,
-                                            type=self.type) @ C
+                    CtKC = C.T @ self.K @ C
                     z_dist = torch.zeros(len(self.idx_i_test))
                     for i in range(len(self.idx_i_test)):
                         z_dist[i] = (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_i_test[i]]
@@ -98,8 +97,7 @@ class Link_prediction():
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
 
-                    CtKC = C.T @ self.kernel(self.X_test,
-                                            type=self.type) @ C
+                    CtKC = C.T @ self.K @ C
                     z_dist = torch.zeros(len(self.removed_i))
                     for i in range(len(self.removed_i)):
                         z_dist[i] = (S[:, self.removed_i[i]].T @ CtKC @ S[:, self.removed_i[i]]
@@ -180,15 +178,7 @@ class Link_prediction():
             {round((self.G.number_of_edges() / ((self.G.number_of_nodes() ** 2)) * 0.5) * 100, 2)}% - this is after removing
             edges drawn into the test set. To avoid this, you could try to create a test and train split yourself.''')
         if self.__class__.__name__ == 'KAA':
-            self.data = torch.from_numpy(nx.adjacency_matrix(G).todense()).long()
-            X_test = self.data.clone()
-            X_test[:] = 0
-            X_test[idx_i_test, idx_j_test] = self.data[idx_i_test, idx_j_test]
             self.data = torch.from_numpy(nx.adjacency_matrix(self.G).toarray()).long()
-
-
-            #self.data[idx_i_test, idx_j_test] = 0
-            self.X_test = X_test
             return target, idx_i_test, idx_j_test
         return target, idx_i_test, idx_j_test
 
