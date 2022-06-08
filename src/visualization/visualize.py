@@ -11,6 +11,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from matplotlib.colors import ListedColormap
 from matplotlib import patches
 from src.data.synthetic_data import truncate_colormap
+from scipy.sparse import csr_matrix
 #from fast_histogram import histogram2d
 
 class Visualization():
@@ -218,6 +219,54 @@ class Visualization():
             plt.show()
         else:
             plt.clf()
+
+
+            
+    def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
+        embeddings, archetypes = self.get_embeddings()
+        z_idx=embeddings.argmax(1)
+        w_idx=embeddings.argmax(1)
+    
+        f_z=z_idx.argsort()
+        f_w=w_idx.argsort()
+        
+        X = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1]), (self.N,self.N), device=self.device)
+        X = X.to_dense()
+        i_lower = np.tril_indices(X.shape[0], -1)
+        X[i_lower] = X.T[i_lower]
+        
+        D = X[:, f_w][f_z]
+    
+        plt.spy(D,markersize=1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.savefig(filename, dpi=200)
+        if show:
+            plt.show()        
+
+    def order_adjacency_matrix_sparse(self, filename="ordered_adj_m.png", show = True):
+        embeddings, archetypes = self.get_embeddings()
+        z_idx=embeddings.argmax(1)
+        w_idx=embeddings.argmax(1)
+    
+        f_z=z_idx.argsort()
+        f_w=w_idx.argsort()
+    
+        new_i=torch.cat((self.sparse_i,self.sparse_j))
+        new_j=torch.cat((self.sparse_j,self.sparse_i))
+    
+        D=csr_matrix((np.ones(new_i.shape[0]),(new_i.cpu().numpy(),new_j.cpu().numpy())),shape=(self.N,self.N))#.todense()
+ 
+    
+        D = D[:, f_w][f_z]
+    
+    
+        plt.spy(D,markersize=1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.savefig(filename, dpi=200)
+        if show:
+            plt.show()
 
 
     def decision_boundary_linear(self, attribute, ax=None):
