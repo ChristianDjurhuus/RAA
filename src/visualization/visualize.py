@@ -99,7 +99,7 @@ class Visualization():
                 # Plotting learning curve
                 ax2.plot(self.losses, c="#00C700")
                 ax2.set_yscale("log")
-            plt.savefig(file_name, dpi=500)
+            plt.savefig(file_name, dpi = 200)
             #plt.show()
 
         if self.__class__.__name__ == "BDRRAA":
@@ -136,7 +136,7 @@ class Visualization():
         cmap = truncate_colormap(cmap, 0.2, 1)
         plt.hist2d(embeddings[:, 0], embeddings[:, 1], cmap = cmap, bins = [x_bins, y_bins], norm=colors.LogNorm())
         plt.colorbar()
-        plt.savefig(filename, dpi = 500)
+        plt.savefig(filename, dpi = 200)
         if show:
             plt.show()
         else:
@@ -164,110 +164,56 @@ class Visualization():
 
 
     def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
-        """
-        - G is a netorkx graph
-        - node_order (optional) is a list of nodes, where each node in G
-            appears exactly once
-        - partitions is a list of node lists, where each node in G appears
-            in exactly one node list
-        - colors is a list of strings indicating what color each
-            partition should be
-        If partitions is specified, the same number of colors needs to be
-        specified.
-        """
-        if self.data_type == "sparse":
-            # Collect the entire graph
-            i_partion = np.concatenate((self.sparse_i_idx.cpu(), self.sparse_i_idx_removed.cpu()))
-            j_partion = np.concatenate((self.sparse_j_idx.cpu(), self.sparse_j_idx_removed.cpu()))
-            edge_list = np.zeros((2, len(i_partion)))
-            for idx in range(len(i_partion)):
-                edge_list[0, idx] = i_partion[idx]
-                edge_list[1, idx] = j_partion[idx]
-            edge_list = list(zip(edge_list[0], edge_list[1]))
-            
-            # Make graph
-            self.G = nx.from_edgelist(edge_list)
-
-        colors=["blue"]
-        partitions  = [self.archetype_partitions()]
-        node_order = [node for archetype in partitions[0] for node in archetype]
-        adjacency_matrix = nx.to_numpy_matrix(self.G, nodelist=node_order)
-
-        #Plot adjacency matrix in toned-down black and white
-        fig = plt.figure(figsize=(5, 5), dpi = 200) # in inches
-        plt.imshow(adjacency_matrix,
-                    cmap="Greys",
-                    interpolation="none")
-        
-        # The rest is just if you have sorted nodes by a partition and want to
-        # highlight the module boundaries
-        assert len(partitions) == len(colors)
-        ax = plt.gca()
-        for partition, color in zip(partitions, colors):
-            current_idx = 0
-            for module in partition:
-                ax.add_patch(patches.Rectangle((current_idx, current_idx),
-                                            len(module), # Width
-                                            len(module), # Height
-                                            facecolor="none",
-                                            edgecolor=color,
-                                            linewidth="1"))
-                current_idx += len(module)
-        fig.savefig(filename, dpi=500)
-
-        if show:
-            plt.show()
+        if self.__class__.__name__ == "LSM" or "LSMAA":
+            Z = self.latent_Z.T.detach()
         else:
-            plt.clf()
+            Z = self.Z.T.detach()
 
-
+        if self.data_type != "sparse":
+            z_idx=Z.numpy().argmax(1)
+            w_idx=Z.numpy().argmax(1)
             
-    def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
-        embeddings, archetypes = self.get_embeddings()
-        z_idx=embeddings.argmax(1)
-        w_idx=embeddings.argmax(1)
-    
-        f_z=z_idx.argsort()
-        f_w=w_idx.argsort()
-        
-        X = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1]), (self.N,self.N), device=self.device)
-        X = X.to_dense()
-        i_lower = np.tril_indices(X.shape[0], -1)
-        X[i_lower] = X.T[i_lower]
-        
-        D = X[:, f_w][f_z]
-    
-        plt.spy(D,markersize=1)
-        plt.xticks([])
-        plt.yticks([])
-        plt.savefig(filename, dpi=200)
-        if show:
-            plt.show()        
+            f_z=z_idx.argsort()
+            f_w=w_idx.argsort()
 
-    def order_adjacency_matrix_sparse(self, filename="ordered_adj_m.png", show = True):
-        embeddings, archetypes = self.get_embeddings()
-        z_idx=embeddings.argmax(1)
-        w_idx=embeddings.argmax(1)
-    
-        f_z=z_idx.argsort()
-        f_w=w_idx.argsort()
-    
-        new_i=torch.cat((self.sparse_i,self.sparse_j))
-        new_j=torch.cat((self.sparse_j,self.sparse_i))
-    
-        D=csr_matrix((np.ones(new_i.shape[0]),(new_i.cpu().numpy(),new_j.cpu().numpy())),shape=(self.N,self.N))#.todense()
- 
-    
-        D = D[:, f_w][f_z]
-    
-    
-        plt.spy(D,markersize=1)
-        plt.xticks([])
-        plt.yticks([])
-        plt.savefig(filename, dpi=200)
-        if show:
-            plt.show()
+            X = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1]), (self.N,self.N), device=self.device)
+            X = X.to_dense()
+            i_lower = np.tril_indices(X.shape[0], -1)
+            X[i_lower] = X.T[i_lower]
+            
+            D = X[:, f_w][f_z]
+        
+            plt.spy(D,markersize=1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.savefig(filename, dpi=200)
+            if show:
+                plt.show()
+            else:
+                plt.clf()
 
+        else:            
+            z_idx=Z.argmax(1)
+            w_idx=Z.argmax(1)
+            
+            f_z=z_idx.argsort()
+            f_w=w_idx.argsort()
+            
+            new_i=torch.cat((self.sparse_i_idx, self.sparse_j_idx))
+            new_j=torch.cat((self.sparse_j_idx, self.sparse_i_idx))
+            
+            D = csr_matrix((np.ones(new_i.shape[0]),(new_i.cpu().numpy(),new_j.cpu().numpy())),shape=(self.N, self.N))#.todense()
+            
+            D = D[:, f_w.cpu().numpy()][f_z.cpu().numpy()]
+            
+            plt.spy(D, markersize = 0.1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.savefig(filename, dpi = 200)
+            if show:
+                plt.show()
+            else:
+                plt.clf()  
 
     def decision_boundary_linear(self, attribute, ax=None):
         """
@@ -341,7 +287,7 @@ class Visualization():
 
         # Put the result into a color plot
         Z = Z.reshape(xx.shape)
-        fig, ax = plt.subplots(dpi = 500)
+        fig, ax = plt.subplots(dpi = 200)
         ax.pcolormesh(xx, yy, Z, cmap=cmap_light)
 
         # Plot also the training points
@@ -350,9 +296,9 @@ class Visualization():
         ax.set_xlim(xx.min(), xx.max())
         ax.set_ylim(yy.min(), yy.max())
         if not filename:
-            fig.savefig("Desicion_boundary_KNN.png",dpi=500)
+            fig.savefig("Desicion_boundary_KNN.png",dpi = 200)
         else:
-            fig.savefig(filename, dpi=500)
+            fig.savefig(filename, dpi = 200)
         #plt.show()
 
         return knn.score(test_X, test_y)
