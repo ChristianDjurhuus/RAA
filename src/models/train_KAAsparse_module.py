@@ -36,7 +36,7 @@ class KAAsparse(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.edge_list = torch.cat((temp1,temp2),1)
         self.input_size = (self.N, self.N)
         self.k = k
-        self.type = type.lower()
+        self.type = type.lower() # TODO merge the two KAA modules
         self.K = self.kernel(self.edge_list)
         self.S = torch.nn.Parameter(torch.randn(self.k, self.N, device = self.device))
         self.C = torch.nn.Parameter(torch.randn(self.N, self.k, device = self.device))

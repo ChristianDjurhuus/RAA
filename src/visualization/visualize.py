@@ -33,7 +33,7 @@ class Visualization():
         if self.__class__.__name__ == "LSM":
             return self.latent_Z.cpu().detach().numpy(), 0
 
-        if self.__class__.__name__ == "KAA":
+        if self.__class__.__name__ == "KAA" or "KAAsparse":
             S = torch.softmax(self.S, dim=0)
             C = torch.softmax(self.C, dim=0)
             embeddings = (torch.matmul(torch.matmul(S, C), S).T).cpu().detach().numpy()

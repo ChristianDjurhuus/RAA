@@ -222,7 +222,7 @@ def main6():
     d = 2
 
     # Data
-    dataset = "facebook"
+    dataset = "cora"
     data = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i.txt")).long()
     data2 = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_j.txt")).long()
     sparse_i_rem = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i_rem.txt")).long()
@@ -231,9 +231,42 @@ def main6():
     non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
 
     model = KAAsparse(k = k, sample_size = 0.2, data = data, data2 = data2, non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem)
-    iterations = 1000
+    iterations = 10000
     model.train(iterations = iterations, print_loss = True)
     auc, _, _ = model.link_prediction()
+    print(auc)
+
+
+def main7():
+    seed = 42
+    torch.manual_seed(seed)
+    k = 3
+    d = 2
+
+    # Data
+    dataset = "cora"
+    data = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i.txt")).long()
+    data2 = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_j.txt")).long()
+    sparse_i_rem = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i_rem.txt")).long()
+    sparse_j_rem = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_j_rem.txt")).long()
+    non_sparse_i = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_i.txt")).long()
+    non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
+
+    kaa = KAAsparse(k = k, sample_size = 0.2, data = data, data2 = data2, non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem)
+    iterations = 10000
+    kaa.train(iterations = 1000, print_loss = True)
+
+    raa = DRRAA(data = data,
+                    data_2 = data2,
+                    k = k,
+                    d = d,
+                    data_type = "sparse",
+                    sample_size=0.5,
+                    link_pred = True,
+                    non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem,
+                    init_Z=kaa.S.detach()) # Set sampling procentage size
+    raa.train(iterations = iterations, print_loss = True)
+    auc, _, _ = raa.link_prediction()
     print(auc)
 
 if __name__ == "__main__":
