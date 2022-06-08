@@ -169,7 +169,7 @@ class Visualization():
 
 
     def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
-        if self.__class__.__name__ == "LSM" or "LSMAA":
+        if self.__class__.__name__ == "LSM" or self.__class__.__name__ == "LSMAA":
             Z = self.latent_Z.T.detach()
         else:
             Z = self.Z.T.detach()
