@@ -239,7 +239,7 @@ class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
 
 
 class LSM_NRE(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, d, k, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size = 0.3,
+    def __init__(self, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size = 0.3,
                  non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None,
                  seed_split = False, seed_init = False):
         super(LSM_NRE, self).__init__()
@@ -282,7 +282,6 @@ class LSM_NRE(nn.Module, Preprocessing, Link_prediction, Visualization):
 
         self.input_size = (self.N, self.N)
         self.latent_dim = d
-        self.k = k
 
         # initialize beta to follow a Uniform(3,5)
         self.beta = torch.nn.Parameter(torch.randn(1, device=self.device))
