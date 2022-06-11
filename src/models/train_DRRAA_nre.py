@@ -56,16 +56,6 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
             self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
             self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
             self.N = int(self.sparse_j_idx.max() + 1)
-        if link_pred:
-            self.test_size = test_size
-            if seed_split != False:
-                np.random.seed(seed_split)
-                torch.manual_seed(seed_split)
-            Link_prediction.__init__(self)
-        if seed_init != False:
-            np.random.seed(seed_init)
-            torch.manual_seed(seed_init)
-        Visualization.__init__(self)
 
         self.input_size = (self.N, self.N)
         self.k = k
