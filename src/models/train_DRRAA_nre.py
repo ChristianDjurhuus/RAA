@@ -1,3 +1,4 @@
+from random import sample
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -13,7 +14,8 @@ from src.features.preprocessing import Preprocessing
 
 class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "Edge list", data_2 = None, link_pred=False, test_size=0.3,
-                 seed_split = False, seed_init = False, init_Z = None):
+                 seed_split = False, seed_init = False, init_Z = None, 
+                 non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None):
         super(DRRAA_nre, self).__init__()
         # TODO Skal finde en måde at loade data ind på. CHECK
         # TODO Skal sørge for at alle classes for de parametre de skal bruge. CHECK
@@ -21,11 +23,38 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         # TODO SKal ha udvides visualiseringskoden. CHECK
         # TODO Skal ha lavet performancec check ()
         # TODO Skal vi lave en sampling_weights med andet end 1 taller?
-
+        self.data_type = data_type
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        #self.device = "cpu"
-        Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
-        self.edge_list, self.N, self.G= Preprocessing.convert_to_egde_list(self)
+        
+        if self.data_type != "sparse":
+            Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
+            self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
+            if link_pred:
+                if seed_split != False:
+                    np.random.seed(seed_split)
+                    torch.manual_seed(seed_split)
+                Link_prediction.__init__(self)
+            if seed_init != False:
+                np.random.seed(seed_init)
+                torch.manual_seed(seed_init)
+            self.sparse_i_idx = self.edge_list[0]
+            self.sparse_i_idx = self.sparse_i_idx.to(self.device)
+            self.sparse_j_idx = self.edge_list[1]
+            self.sparse_j_idx = self.sparse_j_idx.to(self.device)
+
+        if self.data_type == "sparse":
+            #create indices to index properly the receiver and senders variable
+            if link_pred:
+                Link_prediction.__init__(self)
+            self.sparse_i_idx = data.to(self.device)
+            self.sparse_j_idx = data_2.to(self.device)
+            self.non_sparse_i_idx_removed = non_sparse_i.to(self.device)
+            self.non_sparse_j_idx_removed = non_sparse_j.to(self.device)
+            self.sparse_i_idx_removed = sparse_i_rem.to(self.device)
+            self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
+            self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
+            self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
+            self.N = int(self.sparse_j_idx.max() + 1)
         if link_pred:
             self.test_size = test_size
             if seed_split != False:
@@ -41,7 +70,7 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.k = k
         self.d = d
 
-        self.beta = torch.ones(self.input_size[0], device = self.device) # no random effects
+        self.beta = torch.nn.Parameter(torch.randn(1, device=self.device)) # no random effects
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k, device = self.device))
 
@@ -55,10 +84,6 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.missing_data = False
         self.sampling_weights = torch.ones(self.N, device = self.device)
         self.sample_size = round(sample_size * self.N)
-        self.sparse_i_idx = self.edge_list[0]
-        self.sparse_i_idx = self.sparse_i_idx.to(self.device)
-        self.sparse_j_idx = self.edge_list[1]
-        self.sparse_j_idx = self.sparse_j_idx.to(self.device)
         # list for training loss
         self.losses = []
 
@@ -95,15 +120,15 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         G = torch.sigmoid(self.Gate) #Sigmoid activation function
         C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
         #For the nodes without links
-        beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
         AZCz = torch.mm(self.A, torch.mm(torch.mm(Z[:,sample_idx], C[sample_idx,:]), Z[:,sample_idx])).T
-        mat = torch.exp(beta-((AZCz.unsqueeze(1) - AZCz + 1e-06) ** 2).sum(-1) ** 0.5)
-        z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
-                                                          (torch.mm((mat - torch.diag(torch.diagonal(mat))),
-                                                                    torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
+        mat = torch.exp(self.beta - ((AZCz.unsqueeze(1) - AZCz + 1e-06) ** 2).sum(-1) ** 0.5)
+        z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
+        #z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
+        #                                                  (torch.mm((mat - torch.diag(torch.diagonal(mat))),
+        #                                                            torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
         #For the nodes with links
         AZC = torch.mm(self.A, torch.mm(Z[:, sample_idx],C[sample_idx, :])) #This could perhaps be a computational issue
-        z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
+        z_pdist2 = (self.beta - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
