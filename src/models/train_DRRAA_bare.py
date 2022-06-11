@@ -16,7 +16,7 @@ class DRRAA_bare(nn.Module, Preprocessing, Link_prediction, Visualization):
                  seed_split = False, seed_init = False, init_Z = None):
         super(DRRAA_bare, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        #self.device = "cpu"
+        self.test_size = test_size
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
         self.edge_list, self.N, self.G= Preprocessing.convert_to_egde_list(self)
         if link_pred:

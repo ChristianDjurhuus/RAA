@@ -24,6 +24,7 @@ class DRRAA_nre(nn.Module, Preprocessing, Link_prediction, Visualization):
         # TODO Skal ha lavet performancec check ()
         # TODO Skal vi lave en sampling_weights med andet end 1 taller?
         self.data_type = data_type
+        self.test_size = test_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
         if self.data_type != "sparse":
