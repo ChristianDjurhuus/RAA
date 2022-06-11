@@ -223,9 +223,10 @@ class Visualization():
 
             
     def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
-        embeddings, archetypes = self.get_embeddings()
-        z_idx=embeddings.argmax(1)
-        w_idx=embeddings.argmax(1)
+        #embeddings, archetypes = self.get_embeddings()
+        Z = (self.Z.detach().numpy()).T
+        z_idx=Z.argmax(1)
+        w_idx=Z.argmax(1)
     
         f_z=z_idx.argsort()
         f_w=w_idx.argsort()
