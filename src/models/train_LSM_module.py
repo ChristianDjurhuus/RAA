@@ -1,3 +1,4 @@
+from cmath import nan
 import torch
 import torch.nn as nn
 from torch_sparse import spspmm
@@ -98,6 +99,11 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
         mat = torch.exp(beta-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
         #For the nodes without links
         z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
+        #mat = ((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5
+        #z_pdist1 = (0.5 * torch.exp((beta - (mat - torch.diag(torch.diagonal(mat))))).sum())
+
+
+
         #z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
         #                                                  (torch.mm((mat - torch.diag(torch.diagonal(mat))),
         #                                                            torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
@@ -114,7 +120,7 @@ class LSM(nn.Module, Preprocessing, Link_prediction, Visualization):
         optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
 
         for _ in range(iterations):
-            loss = - self.log_likelihood() / self.N
+            loss = - self.log_likelihood() / self.sample_size
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -210,15 +216,15 @@ class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
 
     def log_likelihood(self):
         sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
-        mat = torch.exp(self.beta - ((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
+        beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
+        mat = torch.exp(beta-((self.latent_Z[sample_idx].unsqueeze(1) - self.latent_Z[sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
         #For the nodes without links
-        z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
-        #z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
-        #                                                  (torch.mm((mat - torch.diag(torch.diagonal(mat))),
-        #                                                            torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
+        z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
+                                                          (torch.mm((mat - torch.diag(torch.diagonal(mat))),
+                                                                    torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
 
         #For the nodes with links
-        z_pdist2 = (self.beta - (((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1) ** 0.5) ).sum()
+        z_pdist2 = ((self.beta[sparse_sample_i] + self.beta[sparse_sample_j]) - (((self.latent_Z[sparse_sample_i] - self.latent_Z[sparse_sample_j] + 1e-06) ** 2).sum(-1) ** 0.5) ).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
 
@@ -229,7 +235,7 @@ class LSMAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
 
         for _ in range(iterations):
-            loss = - self.log_likelihood() / self.N
+            loss = - self.log_likelihood() / self.sample_size
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()

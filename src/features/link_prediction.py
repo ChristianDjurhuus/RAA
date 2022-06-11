@@ -296,7 +296,7 @@ class Link_prediction():
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
-        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
+        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2)
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=42).fit(train_X, train_y)
         return kmeans.score(test_X, test_y)
@@ -309,7 +309,7 @@ class Link_prediction():
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
         #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-        reg = LogisticRegression(solver="saga", max_iter=1000, random_state=42)
+        reg = LogisticRegression()
         cv_scores = cross_val_score(reg, X, y, cv=5)
         conf_int = stats.norm.interval(0.95, loc=np.mean(cv_scores), scale=np.std(cv_scores) / np.sqrt(len(cv_scores)))
         return np.mean(cv_scores), conf_int, np.std(cv_scores)
