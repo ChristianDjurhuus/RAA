@@ -33,14 +33,14 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.input_size = (self.N, self.N)
         self.k = k
         self.type = type.lower()
-        self.K = self.kernel(self.X, type = self.type)
+        self.K = self.kernel(self.X, type = self.type, data_type=data_type)
         self.S = torch.nn.Parameter(torch.randn(self.k, self.N, device = self.device))
         self.C = torch.nn.Parameter(torch.randn(self.N, self.k, device = self.device))
         self.a = torch.nn.Parameter(torch.randn(1, device = self.device))
 
         self.losses = []
 
-    def kernel(self, X, type):
+    def kernel(self, X, type, data_type=None):
         # check pairwise_distances
         #kernel = X.T@X
         
@@ -52,15 +52,29 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         if type == 'laplacian':
             D = torch.diag(X.sum(1))
             kernel = D - X #TODO: weird space..
+        if type == 'normalised adjacency':
+            #K=(diag(k)^-1*A) (diag(k)^-1*A)^T
+            if data_type != 'edge list':
+                X = torch.from_numpy(X).float()
+            else:
+                X = X.float()
+            degrees = X.sum(0)
+            degree_matrix_inv = torch.inverse(torch.diag(degrees))
+            kernel = (degree_matrix_inv @ X) @ (degree_matrix_inv @ X).T
+            #kernel = X.T @ X
         return kernel.float()
 
     def SSE(self):
-        S = torch.softmax(self.S, dim=0)
+        '''S = torch.softmax(self.S, dim=0)
         C = torch.softmax(self.C, dim=0)
         KC = self.K @ C
         CtKC = C.T @ self.K @ C
         SSt = S @ S.T
-        SSE = - 2 * torch.sum( torch.sum( S.T *  KC)) + torch.sum(torch.sum(CtKC * SSt))
+        SSE = - 2 * torch.sum( torch.sum( S.T *  KC)) + torch.sum(torch.sum(CtKC * SSt))'''
+        S = torch.softmax(self.S, dim=0)
+        C = torch.softmax(self.C, dim=0)
+        SSE = -2 * torch.trace(C.T @ torch.mm(self.K, S.T)) + torch.trace(
+            C.T @ torch.mm(self.K, C) @ S @ S.T)
         return SSE
 
     def train(self, iterations, LR = 0.01, print_loss = False):
