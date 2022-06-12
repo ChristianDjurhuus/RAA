@@ -1,7 +1,29 @@
 RAA
 ==============================
 
-Implementation of Relational Archetypal Analysis
+Implementation of Relational Archetypal Analysis (RAA).
+RAA is built upon the Archetypal Analysis (AA) method proposed by Cutler and Breiman. AA is a unsupervised clustering algorithm that learns the extremes of the data, called archetypes. From these archetypes all data points can be expressed as convex combinations. Our contribution is the extension of AA to graph data. 
+
+This implementation makes use of sampling from the sparse representation of the adjacency matrix to improve training time. Addtionally have this implementation been developed for unipartite undirected graphs as well as bipartite graphs. However, it is assumed that the graph consist of a single giant connected component.  
+
+### Prerequisites
+
+To run this project make sure you have the following packages.
+* npm
+  ```sh
+  pip install requirements.txt
+  ```
+
+  The implementation uses the [Pytorch sparse](https://github.com/rusty1s/pytorch_sparse) package. Installation details can be found on [Pytorch geometric's webpage](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html).
+
+  The implementation have both CPU and CUDA capabilities. 
+
+
+Latent embedding space             |  Archetypal maximum membership ordering of adjacency matrix
+:-------------------------:|:-------------------------:
+![](/reports/figures/show_embedding_facebook_k3.png)  |  ![](/reports/figures/ordered_adjacency_facebook_k3.pdf)
+
+
 
 Project Organization
 ------------
