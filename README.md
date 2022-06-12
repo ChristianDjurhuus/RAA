@@ -17,6 +17,10 @@ This implementation makes use of sampling from the sparse representation of the 
   The implementation have both CPU and CUDA capabilities. 
 
 
+Original latent space             |  Reconstruction of latent space
+:-------------------------:|:-------------------------:
+![](/reports/figures/complex_convex_org.png)  |  ![](/reports/figures/complex_convex_reg.png)
+
 Latent embedding space             |  Archetypal maximum membership ordering of adjacency matrix
 :-------------------------:|:-------------------------:
 ![](/reports/figures/show_embedding_facebook_k3.png)  |  ![](/reports/figures/ordered_adjacency_facebook_k3-1.png)
