@@ -2,7 +2,7 @@
 from os import link
 from src.models.train_DRRAA_module import DRRAA
 from src.models.train_LSM_module import LSM
-from src.models.train_BDRRAA import BDRRAA
+from src.models.train_BDRRAA_module import BDRRAA
 from src.models.train_KAAsparse_module import KAAsparse
 import torch
 import matplotlib.pyplot as plt
@@ -87,7 +87,7 @@ def main3():
     seed = 4
     torch.random.manual_seed(seed)
     # Data and hyperparameters
-    dataset = "astroph"
+    dataset = "facebook"
     data = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i.txt")).long()
     data2 = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_j.txt")).long()
     sparse_i_rem = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i_rem.txt")).long()
@@ -95,7 +95,7 @@ def main3():
     non_sparse_i = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_i.txt")).long()
     non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
 
-    k = 5
+    k = 8
     d = 2
 
     # Model
@@ -104,14 +104,15 @@ def main3():
                     k=k,
                     d=d,
                     data_type = "sparse",
-                    sample_size=0.5,
+                    sample_size=0.1,
                     non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem) # Set sampling procentage size
 
-    iterations = 2500
-    model.train(iterations = iterations, LR = 0.01, print_loss = True)
-    model.plot_latent_and_loss(iterations = iterations)
-    model.embedding_density()
-    model.plot_auc()
+    iterations = 2000
+    model.train(iterations = iterations, LR = 0.1, print_loss = True)
+    model.order_adjacency_matrix(filename = f"facebook_ordered.pdf", show = True)
+    #model.plot_latent_and_loss(iterations = iterations)
+    #model.embedding_density()
+    #model.plot_auc()
     #model.decision_boundary(attribute = node_attribute)
 
 def main4():
@@ -163,9 +164,10 @@ def main5():
     non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
 
     model = BDRRAA(k = k, d = d, sample_size = 0.2, data = data, data2 = data2, non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem)
-    iterations = 10
-    model.train(iterations = iterations, print_loss = True)
+    iterations = 100
+    model.train(iterations = iterations, LR = 0.1, print_loss = True)
 
+    model.embedding_density(show = True)
     model.plot_auc()
     model.plot_latent_and_loss(iterations = iterations)
     model.plot_loss()
@@ -196,18 +198,12 @@ def main5():
                    embeddings[:, 2].detach().numpy(), c='red')
         ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(),
                    archetypes[2, :].detach().numpy(), marker='^', c='black')
-        '''ax.scatter(embeddings_j[:, 0].detach().numpy(), embeddings_j[:, 1].detach().numpy(),
-                   embeddings_j[:, 2].detach().numpy(), c='blue')
-        ax.scatter(archetypes_j[0, :].detach().numpy(), archetypes_j[1, :].detach().numpy(),
-                   archetypes_j[2, :].detach().numpy(), marker='^', c='purple')'''
         ax.set_title(f"Latent space after {iterations} iterations")
     else:
         fig, (ax1, ax2) = plt.subplots(1, 2)
         ax1.scatter(embeddings[model.sample_shape[0]:, 0].detach().numpy(), embeddings[model.sample_shape[0]:, 1].detach().numpy(), c='red')
         ax1.scatter(embeddings[:model.sample_shape[0], 0].detach().numpy(), embeddings[:model.sample_shape[0], 1].detach().numpy(), c='blue')
         ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
-        #ax1.scatter(embeddings_j[:, 0].detach().numpy(), embeddings_j[:, 1].detach().numpy(), c='blue')
-        #ax1.scatter(archetypes_j[0, :].detach().numpy(), archetypes_j[1, :].detach().numpy(), marker='^', c='purple')
         ax1.set_title(f"Latent space after {iterations} iterations")
         # Plotting learning curve
         ax2.plot(model.losses)
@@ -269,5 +265,36 @@ def main7():
     auc, _, _ = raa.link_prediction()
     print(auc)
 
+def main8():
+    seed = 4
+    torch.random.manual_seed(seed)
+    # Data and hyperparameters
+    dataset = "cora"
+    data = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i.txt")).long()
+    data2 = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_j.txt")).long()
+    sparse_i_rem = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_i_rem.txt")).long()
+    sparse_j_rem = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/sparse_j_rem.txt")).long()
+    non_sparse_i = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_i.txt")).long()
+    non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
+
+    k = 3
+    d = 2
+
+    # Model
+    model = LSM(data = data,
+                    data_2 = data2,
+                    d=d,
+                    data_type = "sparse",
+                    sample_size=0.2,
+                    non_sparse_i=non_sparse_i, non_sparse_j=non_sparse_j, sparse_i_rem=sparse_i_rem, sparse_j_rem=sparse_j_rem) # Set sampling procentage size
+
+    iterations = 2500
+    model.train(iterations = iterations, LR = 0.1, print_loss = True)
+    #model.plot_latent_and_loss(iterations = iterations) #TODO TypeError: float() argument must be a string or a number, not 'LinearSegmentedColormap'
+    #model.embedding_density()
+    model.plot_auc()
+    #model.decision_boundary(attribute = node_attribute)
+
+
 if __name__ == "__main__":
-    main6()
+    main5()

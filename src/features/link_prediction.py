@@ -28,7 +28,7 @@ class Link_prediction():
     def link_prediction(self):
         with torch.no_grad():
             if self.data_type != "sparse":
-                if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
+                if self.__class__.__name__ == "DRRAA":
                     Z = torch.softmax(self.Z, dim=0)
                     G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
@@ -38,10 +38,47 @@ class Link_prediction():
                     M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
                     z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
                     theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)  # (test_size)
+
+                if self.__class__.__name__ == "DRRAA_nre":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
+                                                            Z[:, self.idx_i_test])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.idx_j_test])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (test_size)
+
+                if self.__class__.__name__ == "DRRAA_ngating":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G),
+                                                            Z[:, self.idx_i_test])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G), Z[:, self.idx_j_test])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = (self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test)  # (test_size)
+
+                if self.__class__.__name__ == "DRRAA_bare":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G),
+                                                            Z[:, self.idx_i_test])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G), Z[:, self.idx_j_test])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (test_size)
+
                 if self.__class__.__name__ == "LSM":
                     z_pdist_test = ((self.latent_Z[self.idx_i_test, :] - self.latent_Z[self.idx_j_test,
                                                                         :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
                     theta = self.beta[self.idx_i_test] + self.beta[self.idx_j_test] - z_pdist_test  # (Sample_size)
+                if self.__class__.__name__ == "LSM_NRE":
+                    z_pdist_test = ((self.latent_Z[self.idx_i_test, :] - self.latent_Z[self.idx_j_test,
+                                                                        :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (Sample_size)
+                
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
                     aa = arch.AA(n_archetypes=self.k)
@@ -65,10 +102,8 @@ class Link_prediction():
             if self.data_type == "sparse":
                 #Create target
                 self.target = torch.cat((torch.zeros(self.non_sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
-                # torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.non_sparse_i_idx_removed.shape[0])))
-                # torch.cat((torch.zeros(self.sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
 
-                if self.__class__.__name__ == "DRRAA" or self.__class__.__name__ == "DRRAA_nre" or self.__class__.__name__ == "DRRAA_ngating" or self.__class__.__name__ == "DRRAA_bare":
+                if self.__class__.__name__ == "DRRAA":
                     Z = torch.softmax(self.Z, dim=0)
                     G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
@@ -78,10 +113,46 @@ class Link_prediction():
                     M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
                     z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
                     theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test)  # (test_size)
+                if self.__class__.__name__ == "DRRAA_nre":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
+                                                            Z[:, self.removed_i])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (test_size)
+
+                if self.__class__.__name__ == "DRRAA_ngating":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G),
+                                                            Z[:, self.removed_i])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G), Z[:, self.removed_j])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test)  # (test_size)
+
+                if self.__class__.__name__ == "DRRAA_bare":
+                    Z = torch.softmax(self.Z, dim=0)
+                    G = torch.sigmoid(self.Gate)
+
+                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G),
+                                                            Z[:, self.removed_i])).T  # Size of test set e.g. K x N
+                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, G), Z[:, self.removed_j])).T
+                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (test_size)
+
                 if self.__class__.__name__ == "LSM":
                     z_pdist_test = ((self.latent_Z[self.removed_i, :] - self.latent_Z[self.removed_j,
                                                                         :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
                     theta = self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test  # (Sample_size)
+
+                if self.__class__.__name__ == "LSM_NRE":
+                    z_pdist_test = ((self.latent_Z[self.removed_i, :] - self.latent_Z[self.removed_j,
+                                                                        :] + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
+                    theta = self.beta - z_pdist_test  # (Sample_size)
                 if self.__class__.__name__ == 'LSMAA':
                     # Do the AA on the lsm embeddings
                     #aa = archetypes.AA(n_archetypes=self.k)
@@ -225,7 +296,7 @@ class Link_prediction():
         X, _ = self.get_embeddings()
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
-        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
+        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2)
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=42).fit(train_X, train_y)
         return kmeans.score(test_X, test_y)
@@ -238,7 +309,7 @@ class Link_prediction():
         le = preprocessing.LabelEncoder()
         y = le.fit_transform(self.labels)  # label encoding
         #train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-        reg = LogisticRegression(solver="saga", max_iter=1000, random_state=42)
+        reg = LogisticRegression()
         cv_scores = cross_val_score(reg, X, y, cv=5)
         conf_int = stats.norm.interval(0.95, loc=np.mean(cv_scores), scale=np.std(cv_scores) / np.sqrt(len(cv_scores)))
         return np.mean(cv_scores), conf_int, np.std(cv_scores)

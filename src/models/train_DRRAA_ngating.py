@@ -16,6 +16,7 @@ class DRRAA_ngating(nn.Module, Preprocessing, Link_prediction, Visualization):
                  seed_split = False, seed_init = False, init_Z = None):
         super(DRRAA_ngating, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.test_size = test_size
         #self.device = "cpu"
         Preprocessing.__init__(self, data = data, data_type = data_type, device = self.device, data_2 = data_2)
         self.edge_list, self.N, self.G= Preprocessing.convert_to_egde_list(self)
@@ -91,9 +92,10 @@ class DRRAA_ngating(nn.Module, Preprocessing, Link_prediction, Visualization):
         beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
         AZCz = torch.mm(self.A, torch.mm(torch.mm(Z[:,sample_idx], G[sample_idx,:]), Z[:,sample_idx])).T
         mat = torch.exp(beta-((AZCz.unsqueeze(1) - AZCz + 1e-06) ** 2).sum(-1) ** 0.5)
-        z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
-                                                          (torch.mm((mat - torch.diag(torch.diagonal(mat))),
-                                                                    torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
+        z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
+        #z_pdist1 = (0.5 * torch.mm(torch.exp(torch.ones(sample_idx.shape[0], device = self.device).unsqueeze(0)),
+        #                                                  (torch.mm((mat - torch.diag(torch.diagonal(mat))),
+        #                                                            torch.exp(torch.ones(sample_idx.shape[0], device = self.device)).unsqueeze(-1)))))
         #For the nodes with links
         AZC = torch.mm(self.A, torch.mm(Z[:, sample_idx],G[sample_idx, :])) #This could perhaps be a computational issue
         z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()

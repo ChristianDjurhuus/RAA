@@ -31,10 +31,10 @@ class Visualization():
             archetypes = archetypes.cpu().detach().numpy()
             return embeddings, archetypes
 
-        if self.__class__.__name__ == "LSM":
+        if self.__class__.__name__ == "LSM" or self.__class__.__name__ == "LSMAA":
             return self.latent_Z.cpu().detach().numpy(), 0
 
-        if self.__class__.__name__ == "KAA" or "KAAsparse":
+        if self.__class__.__name__ == "KAA" or self.__class__.__name__ == "KAAsparse":
             S = torch.softmax(self.S, dim=0)
             C = torch.softmax(self.C, dim=0)
             embeddings = (torch.matmul(torch.matmul(S, C), S).T).cpu().detach().numpy()
@@ -50,6 +50,8 @@ class Visualization():
 
             embeddings = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z)).T
             archetypes = torch.matmul(self.A, torch.matmul(Z, C))
+            embeddings = embeddings.cpu().detach().numpy()
+            archetypes = archetypes.cpu().detach().numpy()
             return embeddings, archetypes
 
     def plot_latent_and_loss(self, iterations, c='red', file_name=None):
@@ -114,10 +116,10 @@ class Visualization():
                 plt.show()
 
             else:
-                fig, (ax1, ax2) = plt.subplots(1, 2)
-                ax1.scatter(embeddings[self.sample_shape[0]:, 0].detach().numpy(), embeddings[self.sample_shape[0]:, 1].detach().numpy(), c='red')
-                ax1.scatter(embeddings[:self.sample_shape[0], 0].detach().numpy(), embeddings[:self.sample_shape[0], 1].detach().numpy(), c='blue')
-                ax1.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
+                fig, ax = plt.subplots()
+                ax.scatter(embeddings[self.sample_shape[0]:, 0].detach().numpy(), embeddings[self.sample_shape[0]:, 1].detach().numpy(), c='red')
+                ax.scatter(embeddings[:self.sample_shape[0], 0].detach().numpy(), embeddings[:self.sample_shape[0], 1].detach().numpy(), c='blue')
+                ax.scatter(archetypes[0, :].detach().numpy(), archetypes[1, :].detach().numpy(), marker='^', c='black')
                 plt.show()
 
 
@@ -142,6 +144,9 @@ class Visualization():
         else:
             plt.clf()
 
+    def bipartite_embedding_density(self, filename = "embedding_density.pdf", show = False):
+        embeddings, archetypes = self.get_embeddings()
+
     def get_labels(self, attribute):
         # This only works with a gml file
         return list(nx.get_node_attributes(self.G, attribute).values())
@@ -164,7 +169,7 @@ class Visualization():
 
 
     def order_adjacency_matrix(self, filename="ordered_adj_m.png", show = True):
-        if self.__class__.__name__ == "LSM" or "LSMAA":
+        if self.__class__.__name__ == "LSM" or self.__class__.__name__ == "LSMAA":
             Z = self.latent_Z.T.detach()
         else:
             Z = self.Z.T.detach()
@@ -198,7 +203,7 @@ class Visualization():
             
             f_z=z_idx.argsort()
             f_w=w_idx.argsort()
-            
+
             new_i=torch.cat((self.sparse_i_idx, self.sparse_j_idx))
             new_j=torch.cat((self.sparse_j_idx, self.sparse_i_idx))
             
