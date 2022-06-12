@@ -19,7 +19,7 @@ This implementation makes use of sampling from the sparse representation of the 
 
 Latent embedding space             |  Archetypal maximum membership ordering of adjacency matrix
 :-------------------------:|:-------------------------:
-![](/reports/figures/show_embedding_facebook_k3.png)  |  ![](/reports/figures/ordered_adjacency_facebook_k3.pdf)
+![](/reports/figures/show_embedding_facebook_k3.png)  |  ![](/reports/figures/ordered_adjacency_facebook_k3.png)
 
 
 
