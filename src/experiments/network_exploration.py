@@ -47,9 +47,6 @@ def draw_adjacency_matrix(G, node_order=None, partitions=[], colors=[]):
     fig.savefig(f"adjacency_{dataset}.pdf")
     plt.show()
 
-
-
-
 for dataset in datasets:
     sparse_i = np.loadtxt("data/train_masks/" + dataset + "/sparse_i.txt")
     sparse_j = np.loadtxt("data/train_masks/" + dataset + "/sparse_j.txt")

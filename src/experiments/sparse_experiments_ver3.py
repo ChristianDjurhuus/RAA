@@ -17,10 +17,6 @@ def sparse_experiments(datasets, sample_size, iterations, LR, n_archetypes, prin
     RAA_EMBEDDING = {(key, k): [] for key in datasets for k in range(len(n_archetypes))}
     RAA_NMI = {(key, k): [] for key in datasets for k in range(len(n_archetypes))}
 
-    # To keep track of which seeds perform best.
-    RAA_SEED = {(key, k): 0 for key in datasets for k in range(len(n_archetypes))}
-    RAA_BEST_IDX = {(key, k): 0 for key in datasets for k in range(len(n_archetypes))}
-
     for idx, dataset in enumerate(datasets):
         print(dataset)
         # Load in data
@@ -32,73 +28,55 @@ def sparse_experiments(datasets, sample_size, iterations, LR, n_archetypes, prin
         non_sparse_j = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/non_sparse_j.txt")).long()
         seed = 0
         # Outer loop
-        for outer_loop in range(TRAIN_NUMS):
-            print(f"Outer loop: {outer_loop}")
-            best_loss_LSM, best_seed_LSM, best_AUC_LSM = 999999, 0, 0 # For LSM
-            RAA_AUC_SCORES_TEMP = {(key, k): 0 for key in datasets for k in range(len(n_archetypes))}
-            RAA_EMBEDDING_TEMP = {(key, k): [] for key in datasets for k in range(len(n_archetypes))}
-            RAA_LOSS = {(key, k): 999999 for key in datasets for k in range(len(n_archetypes))}
-            
-            for model_num in range(TRAIN_NUMS):
-                print(f"Train_num iter: {model_num}")
-                # Update seed
-                torch.random.manual_seed(seed)
-                seed += 1
 
-                # Initialize model
-                lsm = LSM(data = data,
-                    data_2 = data2,
-                    d = d,
-                    data_type = "sparse",
-                    sample_size = sample_size[idx],
-                    link_pred = True,
-                    non_sparse_i = non_sparse_i, non_sparse_j = non_sparse_j, sparse_i_rem = sparse_i_rem, sparse_j_rem = sparse_j_rem)
+        for model_num in range(TRAIN_NUMS):
+            print(f"Train_num iter: {model_num}")
+            # Update seed
+            torch.random.manual_seed(seed)
+            seed += 1
 
-                # Train lsm model
-                lsm.train(iterations = iterations[idx], print_loss = print_loss)
-                LSM_AUC_temp, _, _ = lsm.link_prediction()
-                if np.mean(lsm.losses[-100:]) < best_loss_LSM:
-                    best_loss_LSM = np.mean(lsm.losses[-100:])
-                    best_seed_LSM = seeds[model_num]
-                    LSM_AUC = LSM_AUC_temp
+            # Initialize model
+            lsm = LSM(data = data,
+                data_2 = data2,
+                d = d,
+                data_type = "sparse",
+                sample_size = sample_size[idx],
+                link_pred = True,
+                non_sparse_i = non_sparse_i, non_sparse_j = non_sparse_j, sparse_i_rem = sparse_i_rem, sparse_j_rem = sparse_j_rem)
 
-                ## RAA
-                # Cross validation loop
-                for k_vals in range(len(n_archetypes)):
-                    k = n_archetypes[k_vals]
-                    print(f"kvals: {k_vals}")
-                    # model definition
-                    raa = DRRAA(data = data,
-                            data_2 = data2,
-                            k = k,
-                            d = d,
-                            data_type = "sparse",
-                            sample_size = sample_size[idx],
-                            link_pred = True,
-                            non_sparse_i = non_sparse_i, non_sparse_j = non_sparse_j, sparse_i_rem = sparse_i_rem, sparse_j_rem = sparse_j_rem)
-
-                    raa.train(iterations[idx], LR = LR, print_loss = print_loss, scheduling = False)
-                    RAA_AUC_TEMP, _, _ = raa.link_prediction()
-                    # Update the best of the models based upon losses.
-                    if np.mean((raa.losses[-100:])) < RAA_LOSS[dataset, k_vals]:
-                        RAA_LOSS[dataset, k_vals] = np.mean(raa.losses[-100:])
-                        RAA_SEED[dataset, k_vals] = seeds[model_num]
-                        RAA_AUC_SCORES_TEMP[dataset, k_vals] = RAA_AUC_TEMP
-                        # Append embeddings
-                        Z = torch.softmax(raa.Z, dim=0)
-                        G = torch.sigmoid(raa.Gate)
-                        C = (Z.T * G) / (Z.T * G).sum(0)
-                        u, sigma, v = torch.svd(raa.A) # Decomposition of A.
-                        r = torch.matmul(torch.diag(sigma), v.T)
-                        embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
-                        embeddings = embeddings.cpu() #.detach().numpy()
-                        RAA_EMBEDDING_TEMP[dataset, k_vals] = embeddings
-            
-            # Save the best model/result
+            # Train lsm model
+            lsm.train(iterations = iterations[idx], print_loss = print_loss)
+            LSM_AUC, _, _ = lsm.link_prediction()
             LSM_AUC_SCORES[dataset].append(LSM_AUC)
-            for k in range(len(n_archetypes)):
-                RAA_AUC_SCORES[dataset, k].append(RAA_AUC_SCORES_TEMP[dataset, k])
-                RAA_EMBEDDING[dataset, k].append(RAA_EMBEDDING_TEMP[dataset, k])
+
+            ## RAA
+            # Cross validation loop
+            for k_vals in range(len(n_archetypes)):
+                k = n_archetypes[k_vals]
+                print(f"kvals: {k_vals}")
+                # model definition
+                raa = DRRAA(data = data,
+                        data_2 = data2,
+                        k = k,
+                        d = d,
+                        data_type = "sparse",
+                        sample_size = sample_size[idx],
+                        link_pred = True,
+                        non_sparse_i = non_sparse_i, non_sparse_j = non_sparse_j, sparse_i_rem = sparse_i_rem, sparse_j_rem = sparse_j_rem)
+
+                raa.train(iterations[idx], LR = LR, print_loss = print_loss, scheduling = False)
+                RAA_AUC_TEMP, _, _ = raa.link_prediction()
+                RAA_AUC_SCORES[dataset, k_vals].append(RAA_AUC_TEMP)
+
+                # Append embeddings
+                Z = torch.softmax(raa.Z, dim=0)
+                G = torch.sigmoid(raa.Gate)
+                C = (Z.T * G) / (Z.T * G).sum(0)
+                u, sigma, v = torch.svd(raa.A) # Decomposition of A.
+                r = torch.matmul(torch.diag(sigma), v.T)
+                embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
+                embeddings = embeddings.cpu() #.detach().numpy()
+                RAA_EMBEDDING[dataset, k_vals].append(embeddings)
 
     # Create confidence interval for RAA
     lower_bound = [[] for d in datasets]
@@ -183,10 +161,14 @@ def sparse_experiments(datasets, sample_size, iterations, LR, n_archetypes, prin
         idx = np.argmax(RAA_AUC_SCORES[dataset, k])
         for k_inner in range(TRAIN_NUMS):
             if k_inner != idx:
-                NMI.append(calcNMI(RAA_EMBEDDING[dataset, k][idx], RAA_EMBEDDING[dataset, k][k_inner]))
+                NMI.append(float(calcNMI(RAA_EMBEDDING[dataset, k][idx].T, RAA_EMBEDDING[dataset, k][k_inner].T).detach().numpy()))
         NMIs.append(NMI)
 
     print(NMIs)
+
+    with open(f"sparse_NMI_{dataset}.txt", "w") as data:
+        data.write(json.dumps(NMIs))
+
 
     fig, ax = plt.subplots(figsize=(10,5), dpi=500)
     c='#e3427d'
@@ -203,20 +185,21 @@ def sparse_experiments(datasets, sample_size, iterations, LR, n_archetypes, prin
     ax.set_xlim(torch.min(n_archetypes), torch.max(n_archetypes))
     ax.set_xticks(n_archetypes)
     ax.grid(alpha=0.3)
-    plt.savefig(f"NMI_{dataset}.pdf", dpi=500)
+    #plt.savefig(f"NMI_{dataset}.pdf", dpi=500)
+    plt.show()
 
 if __name__ == "__main__":
     datasets = ["cora"]
     n_archetypes = torch.arange(2,11)
     # Set iterations for each dataset
-    iterations = [110]
+    iterations = [15000]
     # Set sample procentage for each dataset
-    sample_size = [0.1]
+    sample_size = [0.75]
     # Set if loss should be printed during training
     print_loss = False
-    LR = 0.10
+    LR = 0.01
 
-    TRAIN_NUMS = 5
+    TRAIN_NUMS = 3
     # Find seeds
     seeds = torch.randint(low = 0, high = 10000, size = (TRAIN_NUMS,))
 
