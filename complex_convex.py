@@ -18,6 +18,7 @@ from turtle import color
 from src.data.synthetic_data import main
 from src.data.synthetic_data import ideal_prediction
 from src.models.train_DRRAA_module import DRRAA
+from src.models.train_KAA_module import KAA
 import networkx as nx
 import numpy as np
 import torch
@@ -55,36 +56,51 @@ num_init = 5
 ##Ideal prediction:
 Iaucs = []
 for _ in range(num_init):
-    ideal_score, _, _ = ideal_prediction(adj_m, A, Z_true, beta=beta, test_size = 0.5)
+    ideal_score, _, _ = ideal_prediction(adj_m, G, A, Z_true, beta=beta, test_size = 0.3)
     Iaucs.append(ideal_score)
 
+seed_split=2
 for k in num_arc:
     NMIs = []
     AUCs = []
+    kaa_pred = KAA(k=k, 
+              data=edge_list,
+              data_type="edge list",
+              link_pred=True,
+              seed_split=seed_split,
+              )
+    kaa = KAA(k=k, 
+              data=adj_m.numpy(),
+              data_type="adjacency matrix",
+              )
+
     for i in range(num_init):
         model = DRRAA(k=k,
                     d=d, 
-                    sample_size=.5, #Without random sampling
+                    sample_size=0.5, #Without random sampling
                     data=edge_list,
-                    link_pred=True)
+                    link_pred=True,
+                    seed_split=seed_split,
+                    init_Z=kaa_pred.S.detach())
 
         model_nmi = DRRAA(k=k,
                     d=d, 
-                    sample_size=.5, #Without random sampling
-                    data=edge_list)
+                    sample_size=0.5, #Without random sampling
+                    data=edge_list,
+                    init_Z=kaa.S.detach())
 
         model.train(iterations=iter, LR=0.01, print_loss=True)
         model_nmi.train(iterations=iter, LR=0.01)
         auc_score, fpr, tpr = model.link_prediction()
         AUCs.append(auc_score)
         Z = F.softmax(model_nmi.Z, dim=0)
-        G = F.sigmoid(model_nmi.Gate)
-        C = (Z.T * G) / (Z.T * G).sum(0)
+        #G = F.sigmoid(model_nmi.Gate)
+        #C = (Z.T * G) / (Z.T * G).sum(0)
 
-        u, sigma, v = torch.svd(model_nmi.A) # Decomposition of A.
-        r = torch.matmul(torch.diag(sigma), v.T)
-        embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
-        archetypes = torch.matmul(r, torch.matmul(Z, C))
+        #u, sigma, v = torch.svd(model_nmi.A) # Decomposition of A.
+        #r = torch.matmul(torch.diag(sigma), v.T)
+        #embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
+        #archetypes = torch.matmul(r, torch.matmul(Z, C))
 
         #Calculate NMI between embeddings
         NMIs.append(calcNMI(Z, Z_true).item())

@@ -32,12 +32,12 @@ for i in range(len(temp)):
     edge_list[1, i] = temp[i].split()[1]
 
 
-num_init = 2
+num_init = 5
 best_loss_raa = 1e16
 best_loss_lsm = 1e16
 seed_split = 42
 seed_init = 1
-iter = 10
+iter = 10000
 
 LSM_aucs = []
 lsm_accs_knn = []
@@ -45,7 +45,7 @@ lsm_accs_lg = []
 
 for _ in range(num_init):
     lsm = LSM(d=2,
-            sample_size=0.8,
+            sample_size=1,
             data = edge_list,
             data_type="edge list",
             link_pred=True,
@@ -58,8 +58,8 @@ for _ in range(num_init):
         best_lsm = lsm
         best_loss_lsm = np.mean(lsm.losses[-100:])
     lsm_auc, _, _ = lsm.link_prediction()
-    lsm_knn_mu, lsm_knn_ci, lsm_knn_std = lsm.KNeighborsClassifier("value")
-    lsm_lg_mu, lsm_lg_ci, lsm_lg_std = lsm.logistic_regression("value")
+    lsm_knn_mu, lsm_knn_ci, lsm_knn_std = lsm.KNeighborsClassifier(list(nx.get_node_attributes(G, "value").values()))
+    lsm_lg_mu, lsm_lg_ci, lsm_lg_std = lsm.logistic_regression(list(nx.get_node_attributes(G, "value").values()))
     lsm_accs_knn.append(lsm_knn_mu)
     lsm_accs_lg.append(lsm_lg_mu)
 
@@ -80,27 +80,28 @@ RAA_conf_accs_lg = {}
 kvals = [2,3,4,5,6,7,8]
 
 for k in kvals:
+    print(k)
     seed_init = 1
-    kaa = KAA(k=k, 
-              data=edge_list,
-              data_type="edge list",
-              link_pred=True,
-              seed_split=seed_split,
-              seed_init=seed_init
-              )
-    kaa.train(iterations=1000)
     RAA_aucs = []
     RAA_accs_knn = []
     RAA_accs_lg = []
 
     for _ in range(num_init):
         #define model
+        kaa = KAA(k=k, 
+        data=edge_list,
+        data_type="edge list",
+        link_pred=True,
+        seed_split=seed_split,
+        seed_init=seed_init
+        )
+        kaa.train(iterations=1000)
         RAA = DRRAA(d=2, 
                     k=k,
                     data=edge_list,
                     data_type='edge list',
                     link_pred=True,
-                    sample_size=0.80,
+                    sample_size=1,
                     seed_split=seed_split,
                     seed_init=seed_init,
                     init_Z=kaa.S.detach())
@@ -112,8 +113,8 @@ for k in kvals:
             best_raa = RAA
         
         raa_auc, _, _ = RAA.link_prediction()
-        raa_knn_mu, raa_knn_ci, raa_knn_std = RAA.KNeighborsClassifier("value")
-        raa_lg_mu, raa_lg_ci, raa_lg_std = RAA.logistic_regression("value")
+        raa_knn_mu, raa_knn_ci, raa_knn_std = RAA.KNeighborsClassifier(list(nx.get_node_attributes(G, "value").values()))
+        raa_lg_mu, raa_lg_ci, raa_lg_std = RAA.logistic_regression(list(nx.get_node_attributes(G, "value").values()))
 
         RAA_accs_knn.append(raa_knn_mu)
         RAA_accs_lg.append(raa_lg_mu)
@@ -157,7 +158,11 @@ ax.fill_between(kvals,
                  color='#e68653', alpha=0.2)
 ax.plot(kvals, [0]*len(kvals) + conf_lsm_aucs[0], '--', color='#e68653')
 ax.plot(kvals,  [0]*len(kvals) + conf_lsm_aucs[1], '--', color='#e68653')
+ax.legend()
+ax.set_xlabel("k: Number of archetypes in models")
+ax.set_ylabel("AUC")
 plt.savefig("polblogs_aucs.png")
+
 
 fig, ax = plt.subplots(figsize=(10,5), dpi=100)
 ax.plot(kvals, list(RAA_avg_accs_knn.values()), '-o', label="RAA - KNN", color='C1')
@@ -200,6 +205,9 @@ ax.fill_between(kvals,
                  color='C4', alpha=0.2)
 ax.plot(kvals, [0]*len(kvals) + conf_lsm_accs_lg[0], '--', color='C4')
 ax.plot(kvals,  [0]*len(kvals) + conf_lsm_accs_lg[1], '--', color='C4')
+ax.legend()
+ax.set_xlabel("k: Number of archetypes in models")
+ax.set_ylabel("AUC")
 plt.savefig("polblogs_accs.png")
 
 
@@ -208,19 +216,20 @@ color_list = ["303638","f0c808","5d4b20","469374","9341b3","e3427d","e68653","eb
 color_list = ["#"+i.lower() for i in color_list]
 color_map = [color_list[14] if G.nodes[i]['value'] == 0 else color_list[5] for i in G.nodes()]
 
-fig, (ax1, ax2) = plt.subplots(2,1, figsize=(10,10), dpi=100)
+fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,10), dpi=100)
+d = dict(G.degree)
 raa_embeddings, raa_archetypes = best_raa.get_embeddings()
-lsm_embeddings = best_lsm.get_embeddings()
+lsm_embeddings = best_lsm.get_embeddings()[0]
 pos_map_raa = dict(list(zip(G.nodes(), list(raa_embeddings))))
 pos_map_lsm = dict(list(zip(G.nodes(), list(lsm_embeddings))))
 nx.draw_networkx_nodes(G, pos=pos_map_raa, ax = ax1, node_color=color_map, alpha=.9, node_size=[v for v in d.values()])
-nx.draw_networkx_edges(G, pos=pos_map_raa, ax = ax1, alpha=.2)
+nx.draw_networkx_edges(G, pos=pos_map_raa, ax = ax1, alpha=.1)
 nx.draw_networkx_nodes(G, pos=pos_map_lsm, ax=ax2, node_color=color_map, alpha=.9, node_size=[v for v in d.values()])
 nx.draw_networkx_edges(G, pos=pos_map_lsm, ax=ax2, alpha=.1)
 archetypal_nodes = best_raa.archetypal_nodes()
-ax2.scatter(raa_archetypes[0, :], raa_archetypes[1, :], marker='^', c='black', label="Archetypes", s=80)
+ax1.scatter(raa_archetypes[0, :], raa_archetypes[1, :], marker='^', c='black', label="Archetypes", s=80)
 for i in archetypal_nodes:
-    ax2.annotate(reverse_label_map[int(i)], 
+    ax1.annotate(reverse_label_map[int(i)], 
                     xy=(raa_embeddings[int(i),:]),
                     xytext=(raa_embeddings[int(i),:])*1.005,
                     bbox=dict(boxstyle="round4",
@@ -230,8 +239,10 @@ for i in archetypal_nodes:
                     arrowprops=dict(arrowstyle="-|>",
                                 connectionstyle="arc3,rad=-0.2",
                                 fc="w"))
-ax2.legend()
-ax1.set_title('LSM\'s Embeddings')
-ax2.set_title('RAA\'s Embeddings')
-plt.savefig("polblogs_embeddings.png")
+ax1.legend()
+ax2.set_title('LSM\'s Embeddings')
+ax1.set_title('RAA\'s Embeddings')
+#plt.savefig("polblogs_embeddings.png")
+
+#print(best_raa.Z.shape[0])
 

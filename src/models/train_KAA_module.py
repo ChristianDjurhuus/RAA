@@ -29,7 +29,7 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             np.random.seed(seed_init)
             torch.manual_seed(seed_init)
         Visualization.__init__(self)
-        self.X = self.data
+        self.X = self.data#self.edge_list#self.data
         self.input_size = (self.N, self.N)
         self.k = k
         self.type = type.lower()
@@ -43,9 +43,18 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def kernel(self, X, type):
         # check pairwise_distances
         #kernel = X.T@X
-        
         if type == 'jaccard':
-            kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
+            #kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
+            X = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1]), (self.N,self.N), device=self.device)
+            X = X.to_dense()
+            i_lower = np.tril_indices(X.shape[0], -1)
+            X[i_lower] = X.T[i_lower]
+            mat = torch.mm(X, X.T)
+            cardv = X.sum(0)
+            card_row = cardv.unsqueeze(0)
+            card_col = cardv.unsqueeze(1)
+            kernel =  mat / (card_row + card_col - mat)
+
         if type == 'parcellating': #TODO: Does not seem to learn the structure.
             temp = ((X.unsqueeze(1) - X + 1e-06)**2).sum(-1)
             kernel = (2 * (temp - torch.diag(torch.diagonal(temp))))**0.5
@@ -57,10 +66,13 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def SSE(self):
         S = torch.softmax(self.S, dim=0)
         C = torch.softmax(self.C, dim=0)
-        KC = self.K @ C
-        CtKC = C.T @ self.K @ C
-        SSt = S @ S.T
-        SSE = - 2 * torch.sum( torch.sum( S.T *  KC)) + torch.sum(torch.sum(CtKC * SSt))
+        #KC = self.K @ C
+        #CtKC = C.T @ self.K @ C
+        #SSt = S @ S.T
+        #SSE = - 2 * torch.sum( torch.sum( S.T * KC)) + torch.sum(torch.sum(CtKC * SSt))
+        
+        SSE = -2 * torch.trace(C.T @ self.K @ S.T) + torch.trace(C.T @ self.K @ C @ S @ S.T)
+        
         return SSE
 
     def train(self, iterations, LR = 0.01, print_loss = False):

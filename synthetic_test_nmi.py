@@ -68,7 +68,7 @@ nsamples=100
 alphas = [0.2, 1, 5]
 iter = 10000
 for alpha in alphas:
-    adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=False)
+    adj_m, z, A, Z_true, beta, partition_cmap = main(alpha, k, d, nsamples, rand=False)
     Graph = nx.from_numpy_matrix(adj_m.numpy())
     temp = [x for x in nx.generate_edgelist(Graph, data=False)]
     edge_list = np.zeros((2, len(temp)))
@@ -81,29 +81,39 @@ for alpha in alphas:
     NMIs_nr = []
     NMIs_bare = []
 
+    kaa = KAA(k=k,
+            data=adj_m.numpy())
+
+    kaa.train(iterations=1000)
+
     for i in range(num_init):
         RAA = DRRAA(k=k,
                     d=d, 
                     sample_size=0.5, #Without random sampling
                     data=edge_list,
-                    data_type='edge list')
+                    data_type='edge list',
+                    init_Z=kaa.S.detach())
+
         RAA_ng = DRRAA_ngating(k=k,
                     d=d, 
                     sample_size=0.5, #Without random sampling
                     data=edge_list,
-                    data_type='edge list')
+                    data_type='edge list',
+                    init_Z=kaa.S.detach())
         
         RAA_nr = DRRAA_nre(k=k,
                     d=d, 
                     sample_size=0.5, #Without random sampling
                     data=edge_list,
-                    data_type='edge list')
+                    data_type='edge list',
+                    init_Z=kaa.S.detach())
         
         RAA_bare = DRRAA_bare(k=k,
             d=d, 
             sample_size=0.5, #Without random sampling
             data=edge_list,
-            data_type='edge list')
+            data_type='edge list',
+            init_Z=kaa.S.detach())
 
         RAA.train(iterations=iter, LR=0.01)
         RAA_ng.train(iterations=iter, LR=0.01)
@@ -219,7 +229,7 @@ conf_AUCs_bare = {}
 
 for alpha in alphas:
     #Creating synth data
-    adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=True)
+    adj_m, z, A, Z_true, beta, partition_cmap = main(alpha, k, d, nsamples, rand=True)
     Graph = nx.from_numpy_matrix(adj_m.numpy())
     temp = [x for x in nx.generate_edgelist(Graph, data=False)]
     edge_list = np.zeros((2, len(temp)))

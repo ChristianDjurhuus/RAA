@@ -13,7 +13,6 @@ Random effects and gating (AUC):
     Iterations = 10,000 
 '''
 
-
 from src.data.synthetic_data import main
 from src.models.calcNMI import calcNMI
 
@@ -47,9 +46,6 @@ import scipy.stats as st
 #TODO
 # Increasing # archetypes
 # Data with and without random effects (Degree heterogenity vs not)
-seed = 42
-torch.random.manual_seed(seed)
-np.random.seed(seed)
 
 avgAUCs = {}
 conf_AUCs = {}
@@ -68,11 +64,21 @@ k=3
 d=2
 nsamples=100
 alphas = [0.2, 1, 5]
-iter = 10000
+iter = 100
+seed_split = 42
+seed_init = 0
 for alpha in alphas:
     #Creating synth data
-    adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=False)
+    seed = 42
+    torch.random.manual_seed(seed)
+    np.random.seed(seed)
+    adj_m, z, A, Z_true, beta, cmap_partition = main(alpha, k, d, nsamples, rand=False)
     Graph = nx.from_numpy_matrix(adj_m.numpy())
+    temp = [x for x in nx.generate_edgelist(Graph, data=False)]
+    edge_list = np.zeros((2, len(temp)))
+    for i in range(len(temp)):
+        edge_list[0, i] = temp[i].split()[0]
+        edge_list[1, i] = temp[i].split()[1]
 
     AUCs = []
     AUCs_ng = []
@@ -83,34 +89,43 @@ for alpha in alphas:
         RAA = DRRAA(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx',
-                    link_pred=True)
+                    data=edge_list,
+                    data_type='edge list',
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init)
+
         RAA_ng = DRRAA_ngating(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx',
-                    link_pred=True)
+                    data=edge_list,
+                    data_type='edge list',
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init)
         
         RAA_nr = DRRAA_nre(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx',
-                    link_pred=True)
+                    data=edge_list,
+                    data_type='edge list',
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init)
         
         RAA_bare = DRRAA_bare(k=k,
             d=d, 
             sample_size=1, #Without random sampling
-            data=Graph,
-            data_type='networkx',
-            link_pred=True)
+            data=edge_list,
+            data_type='edge list',
+            link_pred=True,
+            seed_split =seed_split,
+            seed_init=seed_init)
 
-        RAA.train(iterations=iter, LR=0.01)
-        RAA_ng.train(iterations=iter, LR=0.01)
-        RAA_nr.train(iterations=iter, LR=0.01)
-        RAA_bare.train(iterations=iter, LR=0.01)
+        RAA.train(iterations=iter, LR=0.1)
+        RAA_ng.train(iterations=iter, LR=0.1)
+        RAA_nr.train(iterations=iter, LR=0.1)
+        RAA_bare.train(iterations=iter, LR=0.1)
 
         auc_score, fpr, tpr = RAA.link_prediction()
         auc_score_ng, fpr_ng, tpr_ng = RAA_ng.link_prediction()
@@ -186,10 +201,6 @@ plt.savefig("synthetic_test.png", dpi=500)
 # Investigation of Random effects and Gating #
 #       Data with Random effects             #
 ##############################################
-seed = 42
-torch.random.manual_seed(seed)
-np.random.seed(seed)
-
 avgAUCs = {}
 conf_AUCs = {}
 
@@ -202,10 +213,19 @@ conf_AUCs_ng = {}
 avgAUCs_bare = {}
 conf_AUCs_bare = {}
 
+seed_init = 0
 for alpha in alphas:
     #Creating synth data
-    adj_m, z, A, Z_true, beta = main(alpha, k, d, nsamples, rand=False)
+    seed = 1
+    torch.random.manual_seed(seed)
+    np.random.seed(seed)   
+    adj_m, z, A, Z_true, beta, cmap_partition = main(alpha, k, d, nsamples, rand=True)
     Graph = nx.from_numpy_matrix(adj_m.numpy())
+    temp = [x for x in nx.generate_edgelist(Graph, data=False)]
+    edge_list = np.zeros((2, len(temp)))
+    for i in range(len(temp)):
+        edge_list[0, i] = temp[i].split()[0]
+        edge_list[1, i] = temp[i].split()[1]
 
     AUCs = []
     AUCs_ng = []
@@ -216,34 +236,43 @@ for alpha in alphas:
         RAA = DRRAA(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx',
-                    link_pred=True)
+                    data=edge_list,
+                    data_type='edge list',
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init)
+
         RAA_ng = DRRAA_ngating(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx',
-                    link_pred=True)
+                    data=edge_list,
+                    data_type='edge list',
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init)
         
         RAA_nr = DRRAA_nre(k=k,
                     d=d, 
                     sample_size=1, #Without random sampling
-                    data=Graph,
-                    data_type='networkx',
-                    link_pred=True)
+                    data=edge_list,
+                    data_type='edge list',
+                    link_pred=True,
+                    seed_split = seed_split,
+                    seed_init=seed_init)
         
         RAA_bare = DRRAA_bare(k=k,
             d=d, 
             sample_size=1, #Without random sampling
-            data=Graph,
-            data_type='networkx',
-            link_pred=True)
+            data=edge_list,
+            data_type='edge list',
+            link_pred=True,
+            seed_split = seed_split,
+            seed_init=seed_init)
 
-        RAA.train(iterations=iter, LR=0.01)
-        RAA_ng.train(iterations=iter, LR=0.01)
-        RAA_nr.train(iterations=iter, LR=0.01)
-        RAA_bare.train(iterations=iter, LR=0.01)
+        RAA.train(iterations=iter, LR=0.1)
+        RAA_ng.train(iterations=iter, LR=0.1)
+        RAA_nr.train(iterations=iter, LR=0.1)
+        RAA_bare.train(iterations=iter, LR=0.1)
 
         auc_score, fpr, tpr = RAA.link_prediction()
         auc_score_ng, fpr_ng, tpr_ng = RAA_ng.link_prediction()
@@ -254,7 +283,7 @@ for alpha in alphas:
         AUCs_ng.append(auc_score_ng)
         AUCs_nr.append(auc_score_nr)
         AUCs_bare.append(auc_score_bare)
-
+        seed_init += 1
     #RAA
     avgAUCs[alpha] = np.mean(AUCs)
     conf_AUCs[alpha] = st.t.interval(alpha=0.95, df=len(AUCs)-1, 
