@@ -68,9 +68,11 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             else:
                 X = X.float()
             degrees = X.sum(0)
-            degree_matrix_inv = torch.inverse(torch.diag(degrees))
-            kernel = (degree_matrix_inv @ X) @ (degree_matrix_inv @ X).T
+            degree_matrix_inv = torch.inverse(torch.sqrt(torch.diag(degrees)))
+            #kernel = (degree_matrix_inv @ X) @ (degree_matrix_inv @ X).T
             #kernel = X.T @ X
+            temp = degree_matrix_inv @ X @ degree_matrix_inv
+            kernel = temp @ temp.T
         return kernel.float()
 
     def SSE(self):
