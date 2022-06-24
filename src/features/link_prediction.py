@@ -1,4 +1,3 @@
-from datasets import temp_seed
 import torch
 import matplotlib.pyplot as plt
 from sklearn import metrics
