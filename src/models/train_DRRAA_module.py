@@ -16,13 +16,6 @@ from src.features.preprocessing import Preprocessing
 
 class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
     def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, seed_split = False, seed_init = False, init_Z = None, graph = False):
-        # TODO Skal finde en måde at loade data ind på. CHECK
-        # TODO Skal sørge for at alle classes får de parametre de skal bruge. CHECK
-        # TODO Skal ha indført en train funktion/class. CHECK
-        # TODO SKal ha udvides visualiseringskoden. CHECK
-        # TODO Skal ha lavet performance check ()
-        # TODO Skal vi lave en sampling_weights med andet end 1 taller?
-
         super(DRRAA, self).__init__()
         self.data_type = data_type
         self.link_pred = link_pred
@@ -132,14 +125,14 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
 
-    def train(self, iterations, LR = 0.01, early_stopping=None, print_loss = False, scheduling = False):
-        optimizer = torch.optim.Adam(params = self.parameters(), lr=LR)
+    def train(self, iterations, LR = 0.01, early_stopping = None, print_loss = False, scheduling = False):
+        optimizer = torch.optim.Adam(params = self.parameters(), lr = LR)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            mode='max',
-            factor=0.9,
-            patience=10,
-            verbose=True
+            mode = 'max',
+            factor = 0.9,
+            patience = 10,
+            verbose = True
         )
         if not scheduling:
             for _ in range(iterations):
