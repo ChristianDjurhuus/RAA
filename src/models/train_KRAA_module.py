@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import seaborn as sns
 import numpy as np
-from torch_sparse import spspmm
+from torch_sparse import spspmm, transpose
 from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
+from src.models.calcNMI import calcNMI
 
 # import modules
+from src.data.synthetic_data import main
 from src.visualization.visualize import Visualization
 from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
@@ -35,6 +37,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         if self.data_type != "sparse":
             Preprocessing.__init__(self, data=data, data_type=data_type, device=self.device, data_2=data_2)
             self.edge_list, self.N, self.G = Preprocessing.convert_to_egde_list(self)
+            #self.edge_list = self.kernel(self.edge_list)
             if link_pred:
                 if seed_split != False:
                     np.random.seed(seed_split)
@@ -84,6 +87,24 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
 
         # list for training loss
         self.losses = []
+
+    def kernel(self, edge_list):
+        # check pairwise_distances
+        degree_diag = torch.tensor(torch.unique(edge_list, return_counts=True)[1], dtype = torch.float32)
+        # Create diag edge list
+        diag_edgelist = torch.stack((torch.arange(degree_diag.shape[0], device = self.device), torch.arange(degree_diag.shape[0], device = self.device)), 0)
+        degree_diag = torch.sparse_coo_tensor(diag_edgelist, degree_diag, (self.N, self.N), device = self.device)
+
+        A = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1], device = self.device, dtype = torch.float32), (self.N, self.N), device=self.device)
+        matrix_product = torch.sparse.mm((degree_diag**(-1/2)), torch.sparse.mm(A, (degree_diag**(-1/2))))
+        #index, value = transpose(matrix_product.coalesce().indices(), matrix_product.coalesce().values(), self.N, self.N)
+        #transposed_matrix_product = torch.sparse_coo_tensor(index, value, (self.N, self.N), device = self.device)
+
+        #kernel = torch.sparse.mm(matrix_product, transposed_matrix_product)
+        kernel = matrix_product
+        x = torch.sparse_coo_tensor(kernel.coalesce().indices(), torch.ones(kernel.coalesce().values().shape, device = self.device), (self.N, self.N), device = self.device)
+        kernel = x - kernel
+        return kernel.float()
 
     def sample_network(self):
         # USE torch_sparse lib i.e. : from torch_sparse import spspmm
@@ -198,5 +219,41 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                     #    if mu_cosine_similarity > early_stopping:
                     #        print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
                     #        break
+if __name__=='__main__':
+    from src.data.synthetic_data import main
+    np.random.seed(1)
+    torch.manual_seed(1)
+    iter=10000
+    # create data before the runs to make sure we test initialisations of models:
+    real_alpha = 0.2
+    K = 3
+    n = 1000
+    d = 2
+    adj_m, z, A, Z_true, beta, partition = main(alpha=real_alpha, k=K, dim=d, nsamples=n, rand=True)
+    G = nx.from_numpy_matrix(adj_m.numpy())
 
+    temp = [x for x in nx.generate_edgelist(G, data=False)]
+    edge_list = np.zeros((2, len(temp)))
+    for i in range(len(temp)):
+        edge_list[0, i] = temp[i].split()[0]
+        edge_list[1, i] = temp[i].split()[1]
+
+    # set test and train split seed. We want the same train and test split in order to know that differences
+    # are because of inits.
+    seed_split = 42
+
+    raa = DRRAA(k=K,
+                d=d,
+                sample_size=1,
+                data=edge_list,
+                data_type="edge list",
+                link_pred=False,
+                #seed_split=seed_split,
+                seed_init=41
+                )
+    raa.train(iterations=iter)
+    print(calcNMI(F.softmax(raa.Z.detach(), dim=0),
+            F.softmax(Z_true, dim=0)).float().item())
+    #auc, _, _ = raa.link_prediction()
+    #print(auc)
 
