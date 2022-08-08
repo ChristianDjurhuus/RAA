@@ -86,7 +86,7 @@ class Link_prediction():
                     latent_Z = torch.from_numpy(Z).float()
                     z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
+                    theta = z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
@@ -94,9 +94,11 @@ class Link_prediction():
                     CtKC = C.T @ self.K @ C
                     z_dist = torch.zeros(len(self.idx_i_test))
                     for i in range(len(self.idx_i_test)):
-                        z_dist[i] = (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_i_test[i]]
-                                    + S[:, self.idx_j_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]]
-                                    - 2 * (S[:, self.idx_i_test[i]].T @ CtKC @ S[:, self.idx_j_test[i]])) + 1e-06
+                        S_i_test = S[:, self.idx_i_test[i]]
+                        S_j_test = S[:, self.idx_j_test[i]]
+                        z_dist[i] = (S_i_test.T @ CtKC @ S_i_test
+                                    + S_j_test.T @ CtKC @ S_j_test
+                                    - 2 * (S_i_test.T @ CtKC @ S_j_test)) + 1e-06
                     theta = -z_dist  # (test_size)
             
             if self.data_type == "sparse":
@@ -163,7 +165,7 @@ class Link_prediction():
                     latent_Z = torch.from_numpy(latent_Z).float()
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
+                    theta = z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAAsparse":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)

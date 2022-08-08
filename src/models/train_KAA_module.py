@@ -30,7 +30,7 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             np.random.seed(seed_init)
             torch.manual_seed(seed_init)
         Visualization.__init__(self)
-        self.X = self.data#self.edge_list#self.data
+        self.X = self.data.to(self.device)#self.edge_list#self.data
         self.input_size = (self.N, self.N)
         self.k = k
         self.type = type.lower()
@@ -48,7 +48,9 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             #kernel = 1-torch.from_numpy(pairwise_distances(X.T, X, metric=type)).float()
             X = torch.sparse_coo_tensor(self.edge_list, torch.ones(self.edge_list.shape[1]), (self.N,self.N), device=self.device)
             X = X.to_dense()
-            i_lower = np.tril_indices(X.shape[0], -1)
+            #i_lower = np.tril_indices(X.shape[0], -1)
+            i_lower = torch.tril_indices(X.shape[0], X.shape[1], offset = -1, device = self.device)
+            i_lower = (i_lower[0], i_lower[1])
             X[i_lower] = X.T[i_lower]
             mat = torch.mm(X, X.T)
             cardv = X.sum(0)
@@ -64,10 +66,7 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             kernel = D - X #TODO: weird space..
         if type == 'normalised adjacency':
             #https://math.stackexchange.com/questions/3035968/interpretation-of-symmetric-normalised-graph-adjacency-matrix
-            if data_type != 'edge list':
-                X = torch.from_numpy(X).float()
-            else:
-                X = X.float()
+            X = X.float()
             degrees = X.sum(0)
             #degree_matrix_inv = torch.inverse(torch.sqrt(torch.diag(degrees)))
             degree_matrix_inv = torch.inverse(torch.diag(degrees))
