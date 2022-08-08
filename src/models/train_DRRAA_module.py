@@ -143,7 +143,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         )
         if not scheduling:
             for _ in range(iterations):
-                loss = - self.log_likelihood() / self.N
+                loss = - self.log_likelihood() / self.sample_size #self.N
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -162,7 +162,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                     last_embeddings = last_embeddings.cpu().detach().numpy()
                     last_archetypes =  torch.matmul(r, torch.matmul(Z, C))
                     last_archetypes = last_archetypes.cpu().detach().numpy()
-                loss = - self.log_likelihood() / self.N
+                loss = - self.log_likelihood() / self.sample_size #self.N
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()

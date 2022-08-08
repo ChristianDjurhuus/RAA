@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import pairwise_distances
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 # import modules
 from src.visualization.visualize import Visualization
@@ -62,17 +63,19 @@ class KAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             D = torch.diag(X.sum(1))
             kernel = D - X #TODO: weird space..
         if type == 'normalised adjacency':
-            #K=(diag(k)^-1*A) (diag(k)^-1*A)^T
+            #https://math.stackexchange.com/questions/3035968/interpretation-of-symmetric-normalised-graph-adjacency-matrix
             if data_type != 'edge list':
                 X = torch.from_numpy(X).float()
             else:
                 X = X.float()
             degrees = X.sum(0)
-            degree_matrix_inv = torch.inverse(torch.sqrt(torch.diag(degrees)))
+            #degree_matrix_inv = torch.inverse(torch.sqrt(torch.diag(degrees)))
+            degree_matrix_inv = torch.inverse(torch.diag(degrees))
             #kernel = (degree_matrix_inv @ X) @ (degree_matrix_inv @ X).T
             #kernel = X.T @ X
-            temp = degree_matrix_inv @ X @ degree_matrix_inv
-            kernel = temp @ temp.T
+            #temp = degree_matrix_inv @ X @ degree_matrix_inv
+            #kernel = temp @ temp.T
+            kernel = torch.from_numpy(cosine_similarity(X, X.T))
         return kernel.float()
 
     def SSE(self):
