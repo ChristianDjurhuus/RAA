@@ -16,7 +16,7 @@ import warnings
 import torch.nn.functional as F
 warnings.filterwarnings("ignore")
 
-rand = False
+rand = True
 if rand:
     np.random.seed(1)
     torch.manual_seed(1)
@@ -25,7 +25,7 @@ else:
     torch.manual_seed(42)
 
 
-real_alpha = 0.01
+real_alpha = 0.1
 K = 3
 n = 1000
 d = 2
@@ -43,14 +43,14 @@ for i in range(len(temp)):
 seed_split = 42
 
 iter = 5000
-
+#Z_s=Z_true
 raa = DRRAA(k=K,
                     d=d,
-                    sample_size=1,
+                    sample_size=0.4,
                     data=edge_list,
                     data_type = "edge list",
                     link_pred = False,
-                    seed_init=1
+                    seed_init=60,
         )
 raa.train(iterations=iter, print_loss=True, LR=0.1)
 
