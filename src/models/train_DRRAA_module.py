@@ -105,6 +105,8 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         return sample_idx, sparse_i_sample, sparse_j_sample
 
     def log_likelihood(self):
+        u, sigma, vt = torch.svd(self.A)
+        self.A = torch.nn.Parameter(torch.diag(sigma)@vt.T)
         sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
         Z = F.softmax(self.Z, dim=0) #(K x N)
         G = torch.sigmoid(self.Gate) #Sigmoid activation function
