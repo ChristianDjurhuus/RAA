@@ -8,7 +8,7 @@ from src.models.calcNMI import calcNMI
 k = 3
 d = 2
 num_init = 5
-iter = 5000
+iter = 10
 lr = 0.01
 
 for alpha in [0.25]:#[0.25, 1, 5]:
@@ -26,6 +26,7 @@ for alpha in [0.25]:#[0.25, 1, 5]:
 
     NMIS = np.zeros(num_init)
     seed = 0
+    best_model = None
     for idx in range(num_init):
         best_loss = 1e5
         for _ in range(num_init):
@@ -44,8 +45,10 @@ for alpha in [0.25]:#[0.25, 1, 5]:
             if np.mean(model.losses[-10:]) < best_loss:
                 best_loss = np.mean(model.losses[-10:])
                 nmi = calcNMI(F.softmax(model.Z), true_Z).item()
+                best_model = model
             seed += 1
         print(nmi)
         NMIS[idx] = nmi
-
+        torch.save(best_model.state_dict(), f'synth_best_model_{nmi:.2f}_{alpha}.pt')
+        np.savetxt(f'Z_{nmi:.2f}_{alpha}', F.softmax(model.Z).detach().numpy(),delimiter=',')
     np.savetxt(f'nmis_{alpha}', NMIS, delimiter=',')
