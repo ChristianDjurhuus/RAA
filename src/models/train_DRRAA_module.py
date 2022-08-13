@@ -113,16 +113,67 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
         #For the nodes without links
         beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
-        AZCz = torch.mm(A, torch.mm(torch.mm(Z[:,sample_idx], C[sample_idx,:]), Z[:,sample_idx])).T
+        AZCz = torch.mm(A, torch.mm(torch.mm(Z, C), Z[:,sample_idx])).T
         mat = torch.exp(beta-((AZCz.unsqueeze(1) - AZCz + 1e-06) ** 2).sum(-1) ** 0.5)
         z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
 
         #For the nodes with links
-        AZC = torch.mm(A, torch.mm(Z[:, sample_idx],C[sample_idx, :])) #This could perhaps be a computational issue
+        AZC = torch.mm(A, torch.mm(Z,C))
         z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
+
+    def log_likelihood(self):
+        '''
+        Poisson log-likelihood ignoring the log(k!) constant
+        
+        '''
+    
+        #self.epoch=epoch
+        
+        # Optimize only the random effects initially
+        #if self.scaling:
+            
+        #    sample_idx,sparse_sample_i,sparse_sample_j=self.sample_network()
+        #    mat=torch.exp(torch.zeros(sample_idx.shape[0],sample_idx.shape[0])+1e-06)
+        #    z_pdist1=0.5*torch.mm(torch.exp(self.gamma[sample_idx].unsqueeze(0)),(torch.mm((mat-torch.diag(torch.diagonal(mat))),torch.exp(self.gamma[sample_idx]).unsqueeze(-1))))
+        #    z_pdist2=(self.gamma[sparse_sample_i]+self.gamma[sparse_sample_j]).sum()
+    
+        #    log_likelihood_sparse=z_pdist2-z_pdist1
+            
+        # full optimization
+        #else:
+            
+            #NxK
+        self.latent_z=F.softmax(self.Z)
+        self.gate=torch.sigmoid(self.Gate)
+        self.C = (self.latent_z.transpose(0,1) * self.gate) / (self.latent_z.transpose(0,1) * self.gate).sum(0) #Gating function
+        AZC=self.A@(self.latent_z@self.C)
+    
+            
+        sample_idx,sparse_sample_i,sparse_sample_j=self.sample_network()
+            # sample x K
+        AZC_non_link=(AZC@(self.latent_z[:,sample_idx])).transpose(0,1)
+            
+        AZC_link_i=(AZC@(self.latent_z[:,sparse_sample_i])).transpose(0,1)
+        AZC_link_j=(AZC@(self.latent_z[:,sparse_sample_j])).transpose(0,1)
+            
+        mat=torch.exp(-((torch.cdist(AZC_non_link,AZC_non_link,p=2))))
+        z_pdist1=0.5*torch.mm(torch.exp(self.beta[sample_idx].unsqueeze(0)),(torch.mm((mat-torch.diag(torch.diagonal(mat))),torch.exp(self.beta[sample_idx]).unsqueeze(-1))))
+        z_pdist2=(-((((AZC_link_i-AZC_link_j+1e-06)**2).sum(-1)))**0.5+self.beta[sparse_sample_i]+self.beta[sparse_sample_j]).sum()
+    
+           
+    
+        log_likelihood_sparse=z_pdist2-z_pdist1
+        
+        
+        return log_likelihood_sparse
+
+
+
+
+
 
     def train(self, iterations, LR = 0.01, early_stopping = None, print_loss = False, scheduling = False):
         optimizer = torch.optim.Adam(params = self.parameters(), lr = LR)
@@ -133,15 +184,26 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
             patience = 10,
             verbose = True
         )
+
+        #for param in self.parameters():
+        #    if param.shape == self.A.shape:
+        #        param.requires_grad = False
+
         if not scheduling:
-            for _ in range(iterations):
+            for iter in range(iterations):
+
+         #       if iter > iterations//3:
+         #           for param in self.parameters():
+         #               if param.shape == self.A.shape:
+         #                   param.requires_grad = True
+
                 loss = - self.log_likelihood() / self.sample_size #self.N
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 self.losses.append(loss.item())
                 if print_loss:
-                    print('Loss at the',_,'iteration:',loss.item())
+                    print('Loss at the', iter ,'iteration:',loss.item())
         else:
             for iter in range(iterations):
                 if iter == 0:
