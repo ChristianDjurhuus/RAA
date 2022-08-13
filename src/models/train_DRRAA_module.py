@@ -124,7 +124,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         log_likelihood_sparse = z_pdist2 - z_pdist1
         return log_likelihood_sparse
 
-    def log_likelihood(self):
+    #def log_likelihood(self):
         '''
         Poisson log-likelihood ignoring the log(k!) constant
         
@@ -146,29 +146,29 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         #else:
             
             #NxK
-        self.latent_z=F.softmax(self.Z)
-        self.gate=torch.sigmoid(self.Gate)
-        self.C = (self.latent_z.transpose(0,1) * self.gate) / (self.latent_z.transpose(0,1) * self.gate).sum(0) #Gating function
-        AZC=self.A@(self.latent_z@self.C)
+    #    self.latent_z=F.softmax(self.Z)
+    #    self.gate=torch.sigmoid(self.Gate)
+    #    self.C = (self.latent_z.transpose(0,1) * self.gate) / (self.latent_z.transpose(0,1) * self.gate).sum(0) #Gating function
+    #    AZC=self.A@(self.latent_z@self.C)
     
             
-        sample_idx,sparse_sample_i,sparse_sample_j=self.sample_network()
+    #    sample_idx,sparse_sample_i,sparse_sample_j=self.sample_network()
             # sample x K
-        AZC_non_link=(AZC@(self.latent_z[:,sample_idx])).transpose(0,1)
+    #    AZC_non_link=(AZC@(self.latent_z[:,sample_idx])).transpose(0,1)
             
-        AZC_link_i=(AZC@(self.latent_z[:,sparse_sample_i])).transpose(0,1)
-        AZC_link_j=(AZC@(self.latent_z[:,sparse_sample_j])).transpose(0,1)
+    #    AZC_link_i=(AZC@(self.latent_z[:,sparse_sample_i])).transpose(0,1)
+    #    AZC_link_j=(AZC@(self.latent_z[:,sparse_sample_j])).transpose(0,1)
             
-        mat=torch.exp(-((torch.cdist(AZC_non_link,AZC_non_link,p=2))))
-        z_pdist1=0.5*torch.mm(torch.exp(self.beta[sample_idx].unsqueeze(0)),(torch.mm((mat-torch.diag(torch.diagonal(mat))),torch.exp(self.beta[sample_idx]).unsqueeze(-1))))
-        z_pdist2=(-((((AZC_link_i-AZC_link_j+1e-06)**2).sum(-1)))**0.5+self.beta[sparse_sample_i]+self.beta[sparse_sample_j]).sum()
+    #    mat=torch.exp(-((torch.cdist(AZC_non_link,AZC_non_link,p=2))))
+    #    z_pdist1=0.5*torch.mm(torch.exp(self.beta[sample_idx].unsqueeze(0)),(torch.mm((mat-torch.diag(torch.diagonal(mat))),torch.exp(self.beta[sample_idx]).unsqueeze(-1))))
+    #    z_pdist2=(-((((AZC_link_i-AZC_link_j+1e-06)**2).sum(-1)))**0.5+self.beta[sparse_sample_i]+self.beta[sparse_sample_j]).sum()
     
            
     
-        log_likelihood_sparse=z_pdist2-z_pdist1
+    #    log_likelihood_sparse=z_pdist2-z_pdist1
         
         
-        return log_likelihood_sparse
+    #    return log_likelihood_sparse
 
 
 
