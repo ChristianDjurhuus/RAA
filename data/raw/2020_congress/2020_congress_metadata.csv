@@ -1,0 +1,443 @@
+,State,Party,Name
+0,LA,Republican,Abraham
+1,NC,Democratic,Adams
+2,AL,Republican,Aderholt
+3,CA,Democratic,Aguilar
+4,GA,Republican,Allen
+5,TX,Democratic,Allred
+6,MI,Independent,Amash
+7,NV,Republican,Amodei
+8,ND,Republican,Armstrong
+9,TX,Republican,Arrington
+10,IA,Democratic,Axne
+11,TX,Republican,Babin
+12,NE,Republican,Bacon
+13,IN,Republican,Baird
+14,OH,Republican,Balderson
+15,IN,Republican,Banks
+16,KY,Republican,Barr
+17,CA,Democratic,Barragan
+18,CA,Democratic,Bass
+19,OH,Democratic,Beatty
+20,CA,Democratic,Bera
+21,MI,Republican,Bergman
+22,VA,Democratic,Beyer
+23,AZ,Republican,Biggs
+24,FL,Republican,Bilirakis
+25,GA,Democratic,Bishop (GA)
+26,NC,Republican,Bishop (NC)
+27,UT,Republican,Bishop (UT)
+28,OR,Democratic,Blumenauer
+29,DE,Democratic,Blunt Rochester
+30,OR,Democratic,Bonamici
+31,IL,Republican,Bost
+32,PA,Democratic,"Boyle, Brendan F."
+33,TX,Republican,Brady
+34,NY,Democratic,Brindisi
+35,AL,Republican,Brooks (AL)
+36,IN,Republican,Brooks (IN)
+37,MD,Democratic,Brown (MD)
+38,CA,Democratic,Brownley (CA)
+39,FL,Republican,Buchanan
+40,CO,Republican,Buck
+41,IN,Republican,Bucshon
+42,NC,Republican,Budd
+43,TN,Republican,Burchett
+44,TX,Republican,Burgess
+45,IL,Democratic,Bustos
+46,NC,Democratic,Butterfield
+47,AL,Republican,Byrne
+48,CA,Republican,Calvert
+49,CA,Democratic,Carbajal
+50,CA,Democratic,Cardenas
+51,IN,Democratic,Carson (IN)
+52,GA,Republican,Carter (GA)
+53,TX,Republican,Carter (TX)
+54,PA,Democratic,Cartwright
+55,HI,Democratic,Case
+56,IL,Democratic,Casten (IL)
+57,FL,Democratic,Castor (FL)
+58,TX,Democratic,Castro (TX)
+59,OH,Republican,Chabot
+60,WY,Republican,Cheney
+61,CA,Democratic,"Chu, Judy"
+62,RI,Democratic,Cicilline
+63,CA,Democratic,Cisneros
+64,MA,Democratic,Clark (MA)
+65,NY,Democratic,Clarke (NY)
+66,MO,Democratic,Clay
+67,MO,Democratic,Cleaver
+68,VA,Republican,Cline
+69,TX,Republican,Cloud
+70,SC,Democratic,Clyburn
+71,TN,Democratic,Cohen
+72,OK,Republican,Cole
+73,GA,Republican,Collins (GA)
+74,KY,Republican,Comer
+75,TX,Republican,Conaway
+76,VA,Democratic,Connolly
+77,CA,Republican,Cook
+78,TN,Democratic,Cooper
+79,CA,Democratic,Correa
+80,CA,Democratic,Costa
+81,CT,Democratic,Courtney
+82,CA,Democratic,Cox (CA)
+83,MN,Democratic,Craig
+84,AR,Republican,Crawford
+85,TX,Republican,Crenshaw
+86,FL,Democratic,Crist
+87,CO,Democratic,Crow
+88,TX,Democratic,Cuellar
+89,SC,Democratic,Cunningham
+90,UT,Republican,Curtis
+91,KS,Democratic,Davids (KS)
+92,OH,Republican,Davidson (OH)
+93,CA,Democratic,Davis (CA)
+94,IL,Democratic,"Davis, Danny K."
+95,IL,Republican,"Davis, Rodney"
+96,PA,Democratic,DeFazio
+97,OR,Democratic,DeGette
+98,CO,Democratic,DeLauro
+99,CT,Democratic,DeSaulnier
+100,WA,Democratic,Dean
+101,NY,Democratic,DelBene
+102,FL,Democratic,Delgado
+103,CA,Democratic,Demings
+104,TN,Republican,DesJarlais
+105,FL,Democratic,Deutch
+106,FL,Republican,Diaz-Balart
+107,MI,Democratic,Dingell
+108,TX,Democratic,Doggett
+109,PA,Democratic,"Doyle, Michael F."
+110,SC,Republican,Duncan
+111,FL,Republican,Dunn
+112,MN,Republican,Emmer
+113,NY,Democratic,Engel
+114,TX,Democratic,Escobar
+115,CA,Democratic,Eshoo
+116,NY,Democratic,Espaillat
+117,KS,Republican,Estes
+118,PA,Democratic,Evans
+119,GA,Republican,Ferguson
+120,IA,Democratic,Finkenauer
+121,PA,Republican,Fitzpatrick
+122,TN,Republican,Fleischmann
+123,TX,Democratic,Fletcher
+124,TX,Republican,Flores
+125,NE,Republican,Fortenberry
+126,IL,Democratic,Foster
+127,NC,Republican,Foxx (NC)
+128,FL,Democratic,Frankel
+129,OH,Democratic,Fudge
+130,ID,Republican,Fulcher
+131,HI,Democratic,Gabbard
+132,FL,Republican,Gaetz
+133,WI,Republican,Gallagher
+134,AZ,Democratic,Gallego
+135,CA,Democratic,Garamendi
+136,CA,Republican,Garcia (CA)
+137,IL,Democratic,Garcia (IL)
+138,TX,Democratic,Garcia (TX)
+139,MT,Republican,Gianforte
+140,OH,Republican,Gibbs
+141,TX,Republican,Gohmert
+142,ME,Democratic,Golden
+143,CA,Democratic,Gomez
+144,OH,Republican,Gonzalez (OH)
+145,TX,Democratic,Gonzalez (TX)
+146,PR,Republican,Gonzalez-Colon (PR)
+147,TX,Republican,Gooden
+148,AZ,Republican,Gosar
+149,NJ,Democratic,Gottheimer
+150,TX,Republican,Granger
+151,GA,Republican,Graves (GA)
+152,LA,Republican,Graves (LA)
+153,MO,Republican,Graves (MO)
+154,TN,Republican,Green (TN)
+155,TX,Democratic,"Green, Al (TX)"
+156,VA,Republican,Griffith
+157,AZ,Democratic,Grijalva
+158,WI,Republican,Grothman
+159,MS,Republican,Guest
+160,KY,Republican,Guthrie
+161,NM,Democratic,Haaland
+162,MN,Republican,Hagedorn
+163,GA,Democratic,Hall
+164,CA,Democratic,Harder (CA)
+165,MD,Republican,Harris
+166,MO,Republican,Hartzler
+167,FL,Democratic,Hastings
+168,CT,Democratic,Hayes
+169,WA,Democratic,Heck
+170,OK,Republican,"Hern, Kevin"
+171,WA,Republican,Herrera Beutler
+172,GA,Republican,Hice (GA)
+173,LA,Republican,Higgins (LA)
+174,NY,Democratic,Higgins (NY)
+175,AR,Republican,Hill (AR)
+176,CT,Democratic,Himes
+177,NC,Republican,Holding
+178,IN,Republican,Hollingsworth
+179,OK,Democratic,"Horn, Kendra S."
+180,NV,Democratic,Horsford
+181,PA,Democratic,Houlahan
+182,MD,Democratic,Hoyer
+183,NC,Republican,Hudson
+184,CA,Democratic,Huffman
+185,MI,Republican,Huizenga
+186,CA,Republican,Hunter
+187,TX,Republican,Hurd (TX)
+188,TX,Democratic,Jackson Lee
+189,NY,Republican,Jacobs
+190,WA,Democratic,Jayapal
+191,NY,Democratic,Jeffries
+192,GA,Democratic,Johnson (GA)
+193,LA,Republican,Johnson (LA)
+194,OH,Republican,Johnson (OH)
+195,SD,Republican,Johnson (SD)
+196,TX,Democratic,Johnson (TX)
+197,OH,Republican,Jordan
+198,OH,Republican,Joyce (OH)
+199,PA,Republican,Joyce (PA)
+200,OH,Democratic,Kaptur
+201,NY,Republican,Katko
+202,MA,Democratic,Keating
+203,PA,Republican,Keller
+204,IL,Democratic,Kelly (IL)
+205,MS,Republican,Kelly (MS)
+206,PA,Republican,Kelly (PA)
+207,MA,Democratic,Kennedy
+208,CA,Democratic,Khanna
+209,MI,Democratic,Kildee
+210,WA,Democratic,Kilmer
+211,NJ,Democratic,Kim
+212,WI,Democratic,Kind
+213,IA,Republican,King (IA)
+214,NY,Republican,King (NY)
+215,IL,Republican,Kinzinger
+216,AZ,Democratic,Kirkpatrick
+217,IL,Democratic,Krishnamoorthi
+218,NH,Democratic,Kuster (NH)
+219,TN,Republican,Kustoff (TN)
+220,IL,Republican,LaHood
+221,CA,Republican,LaMalfa
+222,PA,Democratic,Lamb
+223,CO,Republican,Lamborn
+224,RI,Democratic,Langevin
+225,WA,Democratic,Larsen (WA)
+226,CT,Democratic,Larson (CT)
+227,OH,Republican,Latta
+228,MI,Democratic,Lawrence
+229,FL,Democratic,Lawson (FL)
+230,CA,Democratic,Lee (CA)
+231,NV,Democratic,Lee (NV)
+232,AZ,Republican,Lesko
+233,CA,Democratic,Levin (CA)
+234,MI,Democratic,Levin (MI)
+235,GA,Democratic,Lewis
+236,CA,Democratic,"Lieu, Ted"
+237,IL,Democratic,Lipinski
+238,IA,Democratic,Loebsack
+239,CA,Democratic,Lofgren
+240,MO,Republican,Long
+241,GA,Republican,Loudermilk
+242,CA,Democratic,Lowenthal
+243,NY,Democratic,Lowey
+244,OK,Republican,Lucas
+245,MO,Republican,Luetkemeyer
+246,NM,Democratic,Lujan
+247,VA,Democratic,Luria
+248,MA,Democratic,Lynch
+249,NJ,Democratic,Malinowski
+250,NY,Democratic,"Maloney, Carolyn B."
+251,NY,Democratic,"Maloney, Sean"
+252,TX,Republican,Marchant
+253,KS,Republican,Marshall
+254,KY,Republican,Massie
+255,FL,Republican,Mast
+256,CA,Democratic,Matsui
+257,UT,Democratic,McAdams
+258,GA,Democratic,McBath
+259,CA,Republican,McCarthy
+260,TX,Republican,McCaul
+261,CA,Republican,McClintock
+262,MN,Democratic,McCollum
+263,VA,Democratic,McEachin
+264,MA,Democratic,McGovern
+265,NC,Republican,McHenry
+266,WV,Republican,McKinley
+267,CA,Democratic,McNerney
+268,NC,Republican,Meadows
+269,NY,Democratic,Meeks
+270,NY,Democratic,Meng
+271,PA,Republican,Meuser
+272,MD,Democratic,Mfume
+273,WV,Republican,Miller
+274,MI,Independent,Mitchell
+275,MI,Republican,Moolenaar
+276,WV,Republican,Mooney (WV)
+277,WI,Democratic,Moore
+278,NY,Democratic,Morelle
+279,MA,Democratic,Moulton
+280,FL,Democratic,Mucarsel-Powell
+281,OK,Republican,Mullin
+282,FL,Democratic,Murphy (FL)
+283,NC,Republican,Murphy (NC)
+284,NY,Democratic,Nadler
+285,CA,Democratic,Napolitano
+286,MA,Democratic,Neal
+287,CO,Democratic,Neguse
+288,WA,Republican,Newhouse
+289,NJ,Democratic,Norcross
+290,SC,Republican,Norman
+291,DC,Democratic,Norton
+292,CA,Republican,Nunes
+293,AZ,Democratic,O'Halleran
+294,NY,Democratic,Ocasio-Cortez
+295,TX,Republican,Olson
+296,MN,Democratic,Omar
+297,MS,Republican,Palazzo
+298,NJ,Democratic,Pallone
+299,AL,Republican,Palmer
+300,CA,Democratic,Panetta
+301,NH,Democratic,Pappas
+302,NJ,Democratic,Pascrell
+303,NJ,Democratic,Payne
+304,CA,Democratic,Pelosi
+305,IN,Republican,Pence
+306,CO,Democratic,Perlmutter
+307,PA,Republican,Perry
+308,CA,Democratic,Peters
+309,MN,Democratic,Peterson
+310,MN,Democratic,Phillips
+311,ME,Democratic,Pingree
+312,VI,Democratic,Plaskett
+313,WI,Democratic,Pocan
+314,CA,Democratic,Porter
+315,FL,Republican,Posey
+316,MA,Democratic,Pressley
+317,NC,Democratic,Price (NC)
+318,IL,Democratic,Quigley
+319,AS,Republican,Radewagen
+320,MD,Democratic,Raskin
+321,TX,Republican,Ratcliffe
+322,NY,Republican,Reed
+323,PA,Republican,Reschenthaler
+324,NY,Democratic,Rice (NY)
+325,SC,Republican,Rice (SC)
+326,LA,Democratic,Richmond
+327,VA,Republican,Riggleman
+328,AL,Republican,Roby
+329,WA,Republican,Rodgers (WA)
+330,TN,Republican,"Roe, David P."
+331,AL,Republican,Rogers (AL)
+332,KY,Republican,Rogers (KY)
+333,FL,Republican,Rooney (FL)
+334,NY,Democratic,Rose (NY)
+335,TN,Republican,"Rose, John W."
+336,CA,Democratic,Rouda
+337,NC,Republican,Rouzer
+338,TX,Republican,Roy
+339,CA,Democratic,Roybal-Allard
+340,CA,Democratic,Ruiz
+341,MD,Democratic,Ruppersberger
+342,IL,Democratic,Rush
+343,FL,Republican,Rutherford
+344,OH,Democratic,Ryan
+345,MP,Democratic,Sablan
+346,GU,Democratic,San Nicolas
+347,CA,Democratic,Sanchez
+348,MD,Democratic,Sarbanes
+349,LA,Republican,Scalise
+350,PA,Democratic,Scanlon
+351,IL,Democratic,Schakowsky
+352,CA,Democratic,Schiff
+353,IL,Democratic,Schneider
+354,OR,Democratic,Schrader
+355,WA,Democratic,Schrier
+356,AZ,Republican,Schweikert
+357,VA,Democratic,Scott (VA)
+358,GA,Republican,"Scott, Austin"
+359,GA,Democratic,"Scott, David"
+360,WI,Republican,Sensenbrenner
+361,NY,Democratic,Serrano
+362,AL,Democratic,Sewell (AL)
+363,FL,Democratic,Shalala
+364,CA,Democratic,Sherman
+365,NJ,Democratic,Sherrill
+366,IL,Republican,Shimkus
+367,ID,Republican,Simpson
+368,NJ,Democratic,Sires
+369,MI,Democratic,Slotkin
+370,MO,Republican,Smith (MO)
+371,NE,Republican,Smith (NE)
+372,NJ,Republican,Smith (NJ)
+373,WA,Democratic,Smith (WA)
+374,PA,Republican,Smucker
+375,FL,Democratic,Soto
+376,VA,Democratic,Spanberger
+377,FL,Republican,Spano
+378,CA,Democratic,Speier
+379,AZ,Democratic,Stanton
+380,MN,Republican,Stauber
+381,NY,Republican,Stefanik
+382,WI,Republican,Steil
+383,FL,Republican,Steube
+384,MI,Democratic,Stevens
+385,UT,Republican,Stewart
+386,OH,Republican,Stivers
+387,NY,Democratic,Suozzi
+388,CA,Democratic,Swalwell (CA)
+389,CA,Democratic,Takano
+390,TX,Republican,Taylor
+391,CA,Democratic,Thompson (CA)
+392,MS,Democratic,Thompson (MS)
+393,PA,Republican,Thompson (PA)
+394,TX,Republican,Thornberry
+395,WI,Republican,Tiffany
+396,SC,Republican,Timmons
+397,CO,Republican,Tipton
+398,NV,Democratic,Titus
+399,MI,Democratic,Tlaib
+400,NY,Democratic,Tonko
+401,CA,Democratic,Torres (CA)
+402,NM,Democratic,Torres Small (NM)
+403,MA,Democratic,Trahan
+404,MD,Democratic,Trone
+405,OH,Republican,Turner
+406,IL,Democratic,Underwood
+407,MI,Republican,Upton
+408,NJ,Republican,Van Drew
+409,CA,Democratic,Vargas
+410,TX,Democratic,Veasey
+411,TX,Democratic,Vela
+412,NY,Democratic,Velazquez
+413,IN,Democratic,Visclosky
+414,MO,Republican,Wagner
+415,MI,Republican,Walberg
+416,OR,Republican,Walden
+417,NC,Republican,Walker
+418,IN,Republican,Walorski
+419,FL,Republican,Waltz
+420,FL,Democratic,Wasserman Schultz
+421,CA,Democratic,Waters
+422,KS,Republican,Watkins
+423,NJ,Democratic,Watson Coleman
+424,TX,Republican,Weber (TX)
+425,FL,Republican,Webster (FL)
+426,VT,Democratic,Welch
+427,OH,Republican,Wenstrup
+428,AR,Republican,Westerman
+429,VA,Democratic,Wexton
+430,PA,Democratic,Wild
+431,TX,Republican,Williams
+432,FL,Democratic,Wilson (FL)
+433,SC,Republican,Wilson (SC)
+434,VA,Republican,Wittman
+435,AR,Republican,Womack
+436,GA,Republican,Woodall
+437,TX,Republican,Wright
+438,KY,Democratic,Yarmuth
+439,FL,Republican,Yoho
+440,AK,Republican,Young
+441,NY,Republican,Zeldin

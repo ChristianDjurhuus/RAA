@@ -6,7 +6,7 @@ from src.visualization.visualize import Visualization
 from src.features.link_prediction import Link_prediction
 
 class BDRRAA(nn.Module, Link_prediction, Visualization):
-    def __init__(self, k, d, sample_size, data, data_type = "sparse", data2 = None, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None):
+    def __init__(self, k, d, sample_size, data, data_type = "sparse", data2 = None, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, missing=None):
         super(BDRRAA, self).__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.data_type = data_type
@@ -42,7 +42,7 @@ class BDRRAA(nn.Module, Link_prediction, Visualization):
 
         self.losses = []
         self.N = self.sample_shape[0] + self.sample_shape[1]
-
+        self.missing = missing
         Link_prediction.__init__(self)
         Visualization.__init__(self)
 
@@ -78,8 +78,8 @@ class BDRRAA(nn.Module, Link_prediction, Visualization):
         sample_i_idx, sample_j_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
         Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)
         Z_j = torch.softmax(self.Z_j, dim=0)
-        Z = torch.cat((Z_i[:,sample_i_idx], Z_j[:,sample_j_idx]),1) #Concatenate partition embeddings
-        Gate = torch.cat((self.Gate[sample_i_idx,:], self.Gate[sample_j_idx,:]), 0)
+        Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
+        Gate = torch.cat((self.Gate, self.Gate), 0)
         Gate = torch.sigmoid(Gate)  # Sigmoid activation function
         C = (Z.T * Gate) / (Z.T * Gate).sum(0)  # Gating function
         # For the nodes without links
@@ -88,6 +88,12 @@ class BDRRAA(nn.Module, Link_prediction, Visualization):
         mat = (torch.exp(bias_matrix -
                          ((torch.mm(AZC,Z_i[:,sample_i_idx]).T.unsqueeze(1) -
                            torch.mm(AZC,Z_j[:,sample_j_idx]).T + 1e-06) ** 2).sum(-1) ** 0.5)).sum()
+        if self.missing!=None:
+            mat_missing = (torch.exp(bias_matrix-((torch.mm(AZC,Z_i[:,self.missing[:,0]]).T.unsqueeze(1) -
+                           torch.mm(AZC,Z_j[:,self.missing[:,1]]).T + 1e-06) ** 2).sum(-1) ** 0.5)).sum()
+
+
+        #nodes with links
         mat_links = ((self.beta[sparse_sample_i] + self.gamma[sparse_sample_j]) -
                      (((AZC @ Z_i[:,sparse_sample_i]).T -
                        (AZC @ Z_j[:,sparse_sample_j]).T + 1e-06) ** 2).sum(-1) ** 0.5).sum()
