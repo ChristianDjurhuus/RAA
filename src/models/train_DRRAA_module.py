@@ -113,12 +113,12 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
         #For the nodes without links
         beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
-        AZCz = torch.mm(A, torch.mm(torch.mm(Z, C), Z[:,sample_idx])).T
-        mat = torch.exp(beta-((AZCz.unsqueeze(1) - AZCz + 1e-06) ** 2).sum(-1) ** 0.5)
+        #AZCz = torch.mm(A, torch.mm(torch.mm(Z, C), Z[:,sample_idx])).T
+        AZC = torch.mm(A, torch.mm(Z,C))
+        mat = torch.exp(beta-((AZC@self.Z[:,sample_idx].unsqueeze(1) - AZC@self.Z[:,sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
         z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
 
         #For the nodes with links
-        AZC = torch.mm(A, torch.mm(Z,C))
         z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
 
         log_likelihood_sparse = z_pdist2 - z_pdist1
