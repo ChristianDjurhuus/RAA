@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch_sparse import spspmm
 
+
 from src.visualization.visualize import Visualization
 from src.features.link_prediction import Link_prediction
 
@@ -20,8 +21,8 @@ class BDRRAA(nn.Module, Link_prediction, Visualization):
         self.non_sparse_j_idx_removed = non_sparse_j.to(self.device)
         self.sparse_i_idx_removed = sparse_i_rem.to(self.device)
         self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
-        self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
-        self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
+        self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed),dim=0)
+        self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed),dim=0)
 
         self.sample_shape = (len(self.sparse_i_idx), len(self.sparse_j_idx))
         self.sampling_i_weights = torch.ones(self.sample_shape[0], device = self.device)
@@ -60,9 +61,9 @@ class BDRRAA(nn.Module, Link_prediction, Visualization):
         # matrix multiplication B = Adjacency x Indices translator
         # see spspmm function, it give a multiplication between two matrices
         # indexC is the indices where we have non-zero values and valueC the actual values (in this case ones)
-        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1], device = self.device), indices_j_translator,
-                                torch.ones(indices_j_translator.shape[1], device = self.device), self.sample_shape[0], self.sample_shape[1],
-                                self.sample_shape[1], coalesced=True)
+        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1], device=self.device), indices_j_translator,
+                                                        torch.ones(indices_j_translator.shape[1], device = self.device), self.sample_shape[0], self.sample_shape[1],
+                                                        self.sample_shape[1], coalesced=True)
         # second matrix multiplication C = Indices translator x B, indexC returns where we have edges inside the sample
         indexC, valueC = spspmm(indices_i_translator, torch.ones(indices_i_translator.shape[1], device = self.device), indexC, valueC,
                                 self.sample_shape[0], self.sample_shape[0], self.sample_shape[1], coalesced=True)
