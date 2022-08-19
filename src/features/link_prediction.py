@@ -183,7 +183,7 @@ class Link_prediction():
                     Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)
                     Z_j = torch.softmax(self.Z_j, dim=0)
                     Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
-                    #Z = F.softmax(Z, dim=0)
+
                     G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
                     
