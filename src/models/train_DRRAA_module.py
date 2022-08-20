@@ -13,10 +13,12 @@ import networkx as nx
 from src.visualization.visualize import Visualization
 from src.features.link_prediction import Link_prediction
 from src.features.preprocessing import Preprocessing
+from src.features.spectral_clustering import Spectral_clustering_init
 
-class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
-    def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, seed_split = False, seed_init = False, init_Z = None, graph = False):
+class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization, Spectral_clustering_init):
+    def __init__(self, k, d, sample_size, data, data_type = "edge list", data_2 = None, link_pred=False, test_size=0.3, non_sparse_i = None, non_sparse_j = None, sparse_i_rem = None, sparse_j_rem = None, seed_split = False, seed_init = False, init_Z = None, graph = False, values = None, missing_data=None):
         super(DRRAA, self).__init__()
+
         self.data_type = data_type
         self.link_pred = link_pred
         if link_pred:
@@ -45,14 +47,19 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
                 Link_prediction.__init__(self)
             self.sparse_i_idx = data.to(self.device)
             self.sparse_j_idx = data_2.to(self.device)
-            self.non_sparse_i_idx_removed = non_sparse_i.to(self.device)
-            self.non_sparse_j_idx_removed = non_sparse_j.to(self.device)
-            self.sparse_i_idx_removed = sparse_i_rem.to(self.device)
-            self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
-            self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
-            self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
+            if non_sparse_i != None:
+                self.non_sparse_i_idx_removed = non_sparse_i.to(self.device)
+                self.non_sparse_j_idx_removed = non_sparse_j.to(self.device)
+                self.sparse_i_idx_removed = sparse_i_rem.to(self.device)
+                self.sparse_j_idx_removed = sparse_j_rem.to(self.device)
+                self.removed_i = torch.cat((self.non_sparse_i_idx_removed, self.sparse_i_idx_removed))
+                self.removed_j = torch.cat((self.non_sparse_j_idx_removed, self.sparse_j_idx_removed))
+            
             self.N = int(self.sparse_j_idx.max() + 1)
-
+            if values == None:
+                self.values = torch.ones(self.sparse_i_idx.shape[1], device = self.device)
+            else:
+                self.values = values.float().to(self.device)
         
         Visualization.__init__(self)
 
@@ -60,14 +67,30 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         self.k = k
         self.d = d
 
-        self.beta = torch.nn.Parameter(torch.randn(self.input_size[0], device = self.device))
+        ####Nakis contribution:
+        self.missing_data = missing_data
+        Spectral_clustering_init.__init__(self, num_of_eig=k, method="Adjacency")
+        self.initialization=1
+        self.scaling=1
+        #self.flag1 ?
+        self.pdist = nn.PairwiseDistance(p=2, eps=0)
+        self.Softmax = nn.Softmax(1)
+
+        self.spectral_data = self.spectral_clustering()
+        spectral_centroids_to_z = self.spectral_data
+        #N x K
+        if self.spectral_data.shape[1] > self.k:
+            self.latent_z1 = nn.Parameter(spectral_centroids_to_z[:,0:self.k])
+        elif self.spectral_data.shape[1] == self.k:
+            self.latent_z1 = nn.Parameter(spectral_centroids_to_z)
+        else:
+            self.latent_z1 = nn.Parameter(torch.zeros(self.N, self.k, device=self.device))
+            self.latent_z1.data[:, 0:self.spectral_data.shape[1]]=spectral_centroids_to_z    
+        ####
+
+        self.beta = torch.nn.Parameter(torch.ones(self.input_size[0], device = self.device))
         self.softplus = nn.Softplus()
         self.A = torch.nn.Parameter(torch.randn(self.d, self.k, device = self.device))
-        if init_Z != None:
-            self.Z = torch.nn.Parameter(init_Z).to(self.device)
-        else:    
-            self.Z = torch.nn.Parameter(torch.randn(self.k, self.input_size[0], device = self.device))
-
         self.Gate = torch.nn.Parameter(torch.randn(self.input_size[0], self.k, device = self.device))
 
         self.missing_data = False
@@ -90,163 +113,80 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization):
         # matrix multiplication B = Adjacency x Indices translator
         # see spspmm function, it give a multiplication between two matrices
         # indexC is the indices where we have non-zero values and valueC the actual values (in this case ones)
-        indexC, valueC = spspmm(edges, torch.ones(edges.shape[1], device = self.device), indices_translator,
+            
+       
+        indexC, valueC = spspmm(edges, self.values.float(), indices_translator,
                                 torch.ones(indices_translator.shape[1], device = self.device), self.input_size[0], self.input_size[0],
-                                self.input_size[0], coalesced=True)
+                                self.input_size[0], coalesced=True) #TODO ask if this is correct in terms of weighted networks
+
         # second matrix multiplication C = Indices translator x B, indexC returns where we have edges inside the sample
         indexC, valueC = spspmm(indices_translator, torch.ones(indices_translator.shape[1], device = self.device), indexC, valueC,
                                 self.input_size[0], self.input_size[0], self.input_size[0], coalesced=True)
+
 
         # edge row position
         sparse_i_sample = indexC[0, :]
         # edge column position
         sparse_j_sample = indexC[1, :]
 
-        return sample_idx, sparse_i_sample, sparse_j_sample
+        return sample_idx, sparse_i_sample, sparse_j_sample, valueC
 
-    def log_likelihood(self):
-        u, sigma, vt = torch.svd(self.A)
-        A = torch.diag(sigma)@vt.T
-        sample_idx, sparse_sample_i, sparse_sample_j = self.sample_network()
-        Z = F.softmax(self.Z, dim=0) #(K x N)
-        G = torch.sigmoid(self.Gate) #Sigmoid activation function
-        C = (Z.T * G) / (Z.T * G).sum(0) #Gating function
-        #For the nodes without links
-        beta = self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx] #(N x N)
-        #AZCz = torch.mm(A, torch.mm(torch.mm(Z, C), Z[:,sample_idx])).T
-        AZC = torch.mm(A, torch.mm(Z,C))
-        mat = torch.exp(beta-((AZC@self.Z[:,sample_idx].unsqueeze(1) - AZC@self.Z[:,sample_idx] + 1e-06) ** 2).sum(-1) ** 0.5)
-        z_pdist1 = (0.5 * (mat - torch.diag(torch.diagonal(mat))).sum())
+    def log_likelihood(self, epoch):
 
-        #For the nodes with links
-        z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((( torch.matmul(AZC, Z[:, sparse_sample_i]).T - torch.mm(AZC, Z[:, sparse_sample_j]).T + 1e-06) ** 2).sum(-1))) ** 0.5).sum()
+        self.epoch = epoch
+        self.latent_z = self.Softmax(self.latent_z1)
 
-        log_likelihood_sparse = z_pdist2 - z_pdist1
+        #Only optimize random effects
+        if self.scaling:
+            sample_idx, sparse_sample_i, sparse_sample_j, valueC = self.sample_network()
+            mat = torch.exp(self.beta[sample_idx].unsqueeze(1) + self.beta[sample_idx])
+            z_pdist1 = 0.5*(mat-torch.diag(torch.diagonal(mat))).sum()
+            z_pdist2 = (self.beta[sparse_sample_i] + self.beta[sparse_sample_j]).sum()
+
+            log_likelihood_sparse = z_pdist2 - z_pdist1
+
+        # Full optimization
+        else:
+
+            self.latent_z = self.Softmax(self.latent_z1)
+            self.G = torch.sigmoid(self.Gate)
+            self.C = (self.latent_z * self.G) / (self.latent_z * self.G).sum(0) #Gating function
+            #u, sigma, vt = torch.svd(self.A)
+            #A = torch.diag(sigma)@vt.T
+            AZC = self.A@(self.latent_z.transpose(0,1)@self.C)
+            self.AZC = AZC
+            sample_idx, sparse_sample_i, sparse_sample_j, valueC = self.sample_network()
+
+            #For the nodes without links
+            AZC_non_link = (AZC@(self.latent_z[sample_idx].transpose(0,1))).transpose(0,1)
+            AZC_link_i = (AZC@(self.latent_z[sparse_sample_i].transpose(0,1))).transpose(0,1)
+            AZC_link_j = (AZC@(self.latent_z[sparse_sample_j].transpose(0,1))).transpose(0,1)
+            
+            mat=torch.exp(-((torch.cdist(AZC_non_link, AZC_non_link, p=2))))
+            z_pdist1 = 0.5*torch.mm(torch.exp(self.beta[sample_idx].unsqueeze(0)), (torch.mm((mat-torch.diag(torch.diagonal(mat))), torch.exp(self.beta[sample_idx].unsqueeze(-1)))))
+            z_pdist2 = ((self.beta[sparse_sample_i] + self.beta[sparse_sample_j] - (((AZC_link_i-AZC_link_j+1e-06)**2).sum(-1)**0.5)) * valueC).sum()
+
+            log_likelihood_sparse = z_pdist2 - z_pdist1
+
         return log_likelihood_sparse
 
-    #def log_likelihood(self):
-        '''
-        Poisson log-likelihood ignoring the log(k!) constant
-        
-        '''
-    
-        #self.epoch=epoch
-        
-        # Optimize only the random effects initially
-        #if self.scaling:
-            
-        #    sample_idx,sparse_sample_i,sparse_sample_j=self.sample_network()
-        #    mat=torch.exp(torch.zeros(sample_idx.shape[0],sample_idx.shape[0])+1e-06)
-        #    z_pdist1=0.5*torch.mm(torch.exp(self.gamma[sample_idx].unsqueeze(0)),(torch.mm((mat-torch.diag(torch.diagonal(mat))),torch.exp(self.gamma[sample_idx]).unsqueeze(-1))))
-        #    z_pdist2=(self.gamma[sparse_sample_i]+self.gamma[sparse_sample_j]).sum()
-    
-        #    log_likelihood_sparse=z_pdist2-z_pdist1
-            
-        # full optimization
-        #else:
-            
-            #NxK
-    #    self.latent_z=F.softmax(self.Z)
-    #    self.gate=torch.sigmoid(self.Gate)
-    #    self.C = (self.latent_z.transpose(0,1) * self.gate) / (self.latent_z.transpose(0,1) * self.gate).sum(0) #Gating function
-    #    AZC=self.A@(self.latent_z@self.C)
-    
-            
-    #    sample_idx,sparse_sample_i,sparse_sample_j=self.sample_network()
-            # sample x K
-    #    AZC_non_link=(AZC@(self.latent_z[:,sample_idx])).transpose(0,1)
-            
-    #    AZC_link_i=(AZC@(self.latent_z[:,sparse_sample_i])).transpose(0,1)
-    #    AZC_link_j=(AZC@(self.latent_z[:,sparse_sample_j])).transpose(0,1)
-            
-    #    mat=torch.exp(-((torch.cdist(AZC_non_link,AZC_non_link,p=2))))
-    #    z_pdist1=0.5*torch.mm(torch.exp(self.beta[sample_idx].unsqueeze(0)),(torch.mm((mat-torch.diag(torch.diagonal(mat))),torch.exp(self.beta[sample_idx]).unsqueeze(-1))))
-    #    z_pdist2=(-((((AZC_link_i-AZC_link_j+1e-06)**2).sum(-1)))**0.5+self.beta[sparse_sample_i]+self.beta[sparse_sample_j]).sum()
-    
-           
-    
-    #    log_likelihood_sparse=z_pdist2-z_pdist1
-        
-        
-    #    return log_likelihood_sparse
 
 
 
 
-
-
-    def train(self, iterations, LR = 0.01, early_stopping = None, print_loss = False, scheduling = False):
+    def train(self, iterations, LR = 0.01, print_loss = False):
         optimizer = torch.optim.Adam(params = self.parameters(), lr = LR)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer,
-            mode = 'max',
-            factor = 0.9,
-            patience = 10,
-            verbose = True
-        )
 
-        #for param in self.parameters():
-        #    if param.shape == self.A.shape:
-        #        param.requires_grad = False
+        for epoch in range(iterations):
+            if epoch == 500:
+                self.scaling = 0
+            loss = - self.log_likelihood(epoch=epoch) / self.sample_size #self.N
+            self.losses.append(loss.item())
 
-        if not scheduling:
-            for iter in range(iterations):
-
-         #       if iter > iterations//3:
-         #           for param in self.parameters():
-         #               if param.shape == self.A.shape:
-         #                   param.requires_grad = True
-
-                loss = - self.log_likelihood() / self.sample_size #self.N
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                self.losses.append(loss.item())
-                if print_loss:
-                    print('Loss at the', iter ,'iteration:',loss.item())
-        else:
-            for iter in range(iterations):
-                if iter == 0:
-                    Z = torch.softmax(self.Z, dim=0)
-                    G = torch.sigmoid(self.Gate)
-                    C = (Z.T * G) / (Z.T * G).sum(0)
-                    u, sigma, v = torch.svd(self.A) # Decomposition of A.
-                    r = torch.matmul(torch.diag(sigma), v.T)
-                    last_embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
-                    last_embeddings = last_embeddings.cpu().detach().numpy()
-                    last_archetypes =  torch.matmul(r, torch.matmul(Z, C))
-                    last_archetypes = last_archetypes.cpu().detach().numpy()
-                loss = - self.log_likelihood() / self.sample_size #self.N
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                self.losses.append(loss.item())
-                if print_loss:
-                    print('Loss at the',iter,'iteration:',loss.item())
-                if iter % 1000 == 0 and iter != 0:
-                    print('Loss at the',iter,'iteration:',loss.item())
-                    # Learning rate scheduler based on cosine similarity
-                    Z = torch.softmax(self.Z, dim=0)
-                    G = torch.sigmoid(self.Gate)
-                    C = (Z.T * G) / (Z.T * G).sum(0)
-                    u, sigma, v = torch.svd(self.A) # Decomposition of A.
-                    r = torch.matmul(torch.diag(sigma), v.T)
-                    embeddings = torch.matmul(r, torch.matmul(torch.matmul(Z, C), Z)).T
-                    archetypes = torch.matmul(r, torch.matmul(Z, C))
-                    embeddings = embeddings.cpu().detach().numpy()
-                    archetypes = archetypes.cpu().detach().numpy()
-                    cosine_matrix = cosine_similarity(last_embeddings, embeddings)
-                    cosine_between_iter = np.diagonal(cosine_matrix)
-                    cosine_matrix2 = cosine_similarity(last_archetypes, archetypes)
-                    cosine_between_iter_2 = np.diagonal(cosine_matrix2)
-                    mu_cosine_similarity = (np.mean(cosine_between_iter) + np.mean(cosine_between_iter_2)) /2
-                    scheduler.step(mu_cosine_similarity)
-                    last_embeddings = embeddings
-                    print(mu_cosine_similarity)
-                    #if early_stopping != None:
-                    #    if mu_cosine_similarity > early_stopping:
-                    #        print(f"Early stopping occured given that the model has found a stable latent space at {iter} iterations")
-                    #        break
-
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            if print_loss:
+                print('Loss at the', epoch ,'epoch:',loss.item())
 
         
