@@ -57,7 +57,7 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization, Spectral_c
             
             self.N = int(self.sparse_j_idx.max() + 1)
             if values == None:
-                self.values = torch.ones(self.sparse_i_idx.shape[1], device = self.device)
+                self.values = torch.ones(self.sparse_i_idx.shape[0], device = self.device)
             else:
                 self.values = values.float().to(self.device)
         
