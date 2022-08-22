@@ -24,7 +24,8 @@ model = DRRAA(data = org_data,
             k = k,
             d = d,
             data_type = "sparse",
-            sample_size=1,
+            sample_size=0.5,
+            seed_init = 1,
             link_pred = False,
             values=values) # Set sampling procentage size
 
@@ -46,6 +47,7 @@ green_patch = mpatches.Patch(color='green', label='Independent')
 plt.legend(handles=[red_patch, blue_patch, green_patch])
 plt.show()
 
+<<<<<<< HEAD
 z_idx=latent_z.detach().numpy().argmax(1)
 w_idx=latent_z.detach().numpy().argmax(1)
 
@@ -77,7 +79,8 @@ plt.show()
 plt.savefig("vote_rec_adj_m.png", dpi=100)
 
 
-'''attrs = {'color' : metadata['Party'].replace(map).values.tolist(),
+'''
+attrs = {'color' : metadata['Party'].replace(map).values.tolist(),
         'state' : metadata['State'].values.tolist(),
         'party' : metadata['Party'].values.tolist(),
         'name' : metadata['Name'].values.tolist()}
