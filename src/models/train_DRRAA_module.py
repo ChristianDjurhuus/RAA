@@ -21,6 +21,9 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization, Spectral_c
 
         self.data_type = data_type
         self.link_pred = link_pred
+        if seed_init != False:
+            np.random.seed(seed_init)
+            torch.manual_seed(seed_init)
         if link_pred:
             self.test_size = test_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -33,9 +36,6 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization, Spectral_c
                     np.random.seed(seed_split)
                     torch.manual_seed(seed_split)
                 Link_prediction.__init__(self)
-            if seed_init != False:
-                np.random.seed(seed_init)
-                torch.manual_seed(seed_init)
             self.sparse_i_idx = self.edge_list[0]
             self.sparse_i_idx = self.sparse_i_idx.to(self.device)
             self.sparse_j_idx = self.edge_list[1]

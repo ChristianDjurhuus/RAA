@@ -18,7 +18,7 @@ org_data2 = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/org_sp
 values = torch.from_numpy(np.loadtxt("data/train_masks/" + dataset + "/org_values.txt")).long()
 metadata = pd.read_csv("data/raw/2020_congress/2020_congress_metadata.csv")
 
-k=3
+k=2
 d=2
 iter = 1000
 model = DRRAA(data = org_data,
@@ -26,8 +26,8 @@ model = DRRAA(data = org_data,
             k = k,
             d = d,
             data_type = "sparse",
-            sample_size=1,
-            seed_init = 0,
+            sample_size=0.5,
+            seed_init = 1,
             link_pred = False,
             values=values) # Set sampling procentage size
 
@@ -48,6 +48,9 @@ blue_patch = mpatches.Patch(color='blue', label='Democratic')
 green_patch = mpatches.Patch(color='green', label='Independent')
 plt.legend(handles=[red_patch, blue_patch, green_patch])
 plt.show()
+
+
+
 
 attrs = {'color' : metadata['Party'].replace(map).values.tolist(),
         'state' : metadata['State'].values.tolist(),
