@@ -106,15 +106,25 @@ class Link_prediction():
                 self.target = torch.cat((torch.zeros(self.non_sparse_i_idx_removed.shape[0]), torch.ones(self.sparse_i_idx_removed.shape[0])))
 
                 if self.__class__.__name__ == "DRRAA":
-                    Z = torch.softmax(self.Z, dim=0)
-                    G = torch.sigmoid(self.Gate)
-                    C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
-
-                    M_i = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C),
-                                                            Z[:, self.removed_i])).T  # Size of test set e.g. K x N
-                    M_j = torch.matmul(self.A, torch.matmul(torch.matmul(Z, C), Z[:, self.removed_j])).T
-                    z_pdist_test = ((M_i - M_j + 1e-06) ** 2).sum(-1) ** 0.5  # N x N
-                    theta = (self.beta[self.removed_i] + self.beta[self.removed_j] - z_pdist_test)  # (test_size)
+                    self.latent_z = self.Softmax(self.latent_z1)
+                    self.G = torch.sigmoid(self.Gate)
+                    self.C = (self.latent_z * self.G) / (self.latent_z*self.G).sum(0)
+                    #AZC=self.A@(self.latent_z.transpose(0,1)@self.C)
+                    u, sigma, vt = torch.svd(self.A)
+                    self.A_svd = torch.diag(sigma)@vt.T
+                
+                    AZC=self.A_svd@(self.latent_z.transpose(0,1)@self.C)
+                    with torch.no_grad():
+                        if not self.scaling:
+                            AZC_link_i=(AZC@(self.latent_z[self.removed_i].transpose(0,1))).transpose(0,1)
+                            AZC_link_j=(AZC@(self.latent_z[self.removed_j].transpose(0,1))).transpose(0,1)
+                            
+                            z_pdist_miss=(((AZC_link_i-AZC_link_j)**2).sum(-1))**0.5
+                            theta=-z_pdist_miss+self.beta[self.removed_i]+self.beta[self.removed_j]
+                        else:
+                            theta=self.beta[self.removed_i]+self.beta[self.removed_j]
+                            
+               
                 if self.__class__.__name__ == "DRRAA_nre":
                     Z = torch.softmax(self.Z, dim=0)
                     G = torch.sigmoid(self.Gate)
@@ -183,7 +193,7 @@ class Link_prediction():
                     Z_i = torch.softmax(self.Z_i, dim=0)  # (K x N)
                     Z_j = torch.softmax(self.Z_j, dim=0)
                     Z = torch.cat((Z_i, Z_j),1) #Concatenate partition embeddings
-                    #Z = F.softmax(Z, dim=0)
+
                     G = torch.sigmoid(self.Gate)
                     C = (Z.T * G) / (Z.T * G).sum(0)  # Gating function
                     
