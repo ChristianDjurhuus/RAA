@@ -86,7 +86,7 @@ class Link_prediction():
                     latent_Z = torch.from_numpy(Z).float()
                     z_pdist_test = ((latent_Z[self.idx_i_test, :] - latent_Z[self.idx_j_test, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = z_pdist_test  # (test_size)
+                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
                 if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
@@ -165,8 +165,8 @@ class Link_prediction():
                     latent_Z = torch.from_numpy(latent_Z).float()
                     z_pdist_test = ((latent_Z[self.removed_i, :] - latent_Z[self.removed_j, :] + 1e-06) ** 2).sum(
                         -1) ** 0.5  # N x N
-                    theta = z_pdist_test  # (test_size)
-                if self.__class__.__name__ == "KAAsparse":
+                    theta = self.beta.cpu() - z_pdist_test  # (test_size)
+                if self.__class__.__name__ == "KAA":
                     S = torch.softmax(self.S, dim=0)
                     C = torch.softmax(self.C, dim=0)
 
@@ -259,21 +259,6 @@ class Link_prediction():
             self.data = torch.from_numpy(nx.adjacency_matrix(self.G).toarray()).long()
             return target, idx_i_test, idx_j_test
         return target, idx_i_test, idx_j_test
-
-    def plot_auc(self):
-        auc_score, fpr, tpr = self.link_prediction()
-        plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % auc_score)
-        plt.plot([0, 1], [0, 1], 'r--', label='random')
-        plt.legend(loc='lower right')
-        plt.xlabel("False positive rate")
-        plt.ylabel("True positive rate")
-        if self.__class__.__name__ == "DRRAA":
-            plt.title("RAA model")
-        if self.__class__.__name__ == "LSM":
-            plt.title("LSM model")
-        if self.__class__.__name__ == "BDRRAA":
-            plt.title("BRAA model")
-        plt.show()
 
     def get_labels(self, attribute):
         # This only works with a gml file
