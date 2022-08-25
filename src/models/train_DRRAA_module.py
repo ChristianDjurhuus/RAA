@@ -170,8 +170,30 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization, Spectral_c
 
         return log_likelihood_sparse
 
+    def train_and_plot_auc(self, iterations, LR = 0.01, print_loss = False):
+        optimizer = torch.optim.Adam(params = self.parameters(), lr = LR)
+        x = []
+        y = []
+        for i in range(iterations):
+            loss = - self.log_likelihood() / self.sample_size #self.N
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            self.losses.append(loss.item())
+            if print_loss:
+                print(f'Loss at the {i} iteration:',loss.item())
 
+            if i % 100 == 0:
+                x.append(i)
+                auc, _, _ = self.link_prediction()
+                y.append(auc)
 
+        fig, ax = plt.subplots()
+        ax.plot(x,y)
+        ax.set_xlabel("Iteration")
+        ax.set_ylabel("AUC score")
+        fig.savefig("training_auc.pdf")
+        plt.show()
 
 
     def train(self, iterations, LR = 0.01, print_loss = False):
@@ -188,5 +210,3 @@ class DRRAA(nn.Module, Preprocessing, Link_prediction, Visualization, Spectral_c
             optimizer.step()
             if print_loss:
                 print('Loss at the', epoch ,'epoch:',loss.item())
-
-        
