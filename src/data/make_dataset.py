@@ -2,6 +2,7 @@ from synthetic_data import main
 import torch
 import numpy as np
 import networkx as nx
+import scipy.sparse as ss
 
 seed = 1
 k=3
@@ -14,6 +15,11 @@ for rand in [False, True]:
         np.random.seed(seed)
         adj_m, z, A, Z, beta = main(alpha=alpha, k=k, dim=dim, nsamples=nsamples, rand=rand)
 
+        edge_list = ss.coo_matrix(adj_m)
+        org_data = A@Z
+        org_sparse_i = edge_list.row
+        org_sparse_j = edge_list.col
+        org_archetypes = A
         #remove 50% while maintaining residual network is connected
         #only sample from upper corner
         temp = adj_m - torch.tril(adj_m)
@@ -60,6 +66,10 @@ for rand in [False, True]:
             np.savetxt(f'data/train_masks/synthetic{alpha}_rand/sparse_i.txt', sparse_i)
             np.savetxt(f'data/train_masks/synthetic{alpha}_rand/sparse_j.txt', sparse_j)
             np.savetxt(f'data/train_masks/synthetic{alpha}_rand/true_latent_Z.txt', Z.numpy())
+            np.savetxt(f'data/train_masks/synthetic{alpha}_rand/org_sparse_i.txt', org_sparse_i)
+            np.savetxt(f'data/train_masks/synthetic{alpha}_rand/org_sparse_j.txt', org_sparse_j)
+            np.savetxt(f'data/train_masks/synthetic{alpha}_rand/org_archetypes.txt', org_archetypes.numpy())
+            np.savetxt(f'data/train_masks/synthetic{alpha}_rand/org_data.txt', org_data.numpy())
         else:
             np.savetxt(f'data/train_masks/synthetic{alpha}/non_sparse_i.txt', non_sparse_i.numpy())
             np.savetxt(f'data/train_masks/synthetic{alpha}/non_sparse_j.txt', non_sparse_j.numpy())
@@ -68,3 +78,7 @@ for rand in [False, True]:
             np.savetxt(f'data/train_masks/synthetic{alpha}/sparse_i.txt', sparse_i)
             np.savetxt(f'data/train_masks/synthetic{alpha}/sparse_j.txt', sparse_j)
             np.savetxt(f'data/train_masks/synthetic{alpha}/true_latent_Z.txt', Z.numpy())
+            np.savetxt(f'data/train_masks/synthetic{alpha}/org_sparse_i.txt', org_sparse_i)
+            np.savetxt(f'data/train_masks/synthetic{alpha}/org_sparse_j.txt', org_sparse_j)
+            np.savetxt(f'data/train_masks/synthetic{alpha}/org_archetypes.txt', org_archetypes.numpy())
+            np.savetxt(f'data/train_masks/synthetic{alpha}/org_data.txt', org_data.numpy())
