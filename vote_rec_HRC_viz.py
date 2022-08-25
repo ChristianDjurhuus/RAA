@@ -38,10 +38,10 @@ model = DRRAA(data = org_data,
             k = k,
             d = d,
             data_type = "sparse",
-            sample_size=0.5,
+            sample_size=0.5, # Set sampling procentage size
             seed_init = 1,
             link_pred = False,
-            values=values) # Set sampling procentage size
+            values=values)
 
 model.train(iterations=iter, LR=0.1, print_loss=True)
 latent_z = model.Softmax(model.latent_z1)
